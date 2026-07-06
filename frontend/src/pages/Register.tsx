@@ -1,329 +1,166 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaGavel, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 
 const Register: React.FC = () => {
-  const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'judge' | 'lawyer'>('lawyer');
-  
-  // Extra fields
-  const [designation, setDesignation] = useState('');
-  const [districtScope, setDistrictScope] = useState('');
-  const [barId, setBarId] = useState('');
-
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [extraField, setExtraField] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
-  const { register, error, loading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { register, error, clearError } = useAuth();
   const navigate = useNavigate();
-
-  // Gujarat Districts static list for dropdown
-  const gujaratDistricts = [
-    'Ahmedabad', 'Amreli', 'Anand', 'Aravalli', 'Banaskantha', 'Bharuch', 
-    'Bhavnagar', 'Botad', 'Chhota Udaipur', 'Dahod', 'Dang', 'Devbhoomi Dwarka', 
-    'Gandhinagar', 'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kheda', 'Kutch', 
-    'Mahisagar', 'Mehsana', 'Morbi', 'Narmada', 'Navsari', 'Panchmahal', 
-    'Patan', 'Porbandar', 'Rajkot', 'Sabarkantha', 'Surat', 'Surendranagar', 
-    'Tapi', 'Vadodara', 'Valsad'
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+    clearError();
 
-    if (!username || !fullName || !email || !password) {
-      setLocalError("Please fill in all standard credentials fields.");
+    if (!fullName || !username || !email || !password || !confirmPassword) {
+      setLocalError('Please fill out all required fields.');
       return;
     }
 
-    if (role === 'judge') {
-      if (!designation) {
-        setLocalError("Please enter your official judicial designation.");
-        return;
-      }
-      if (!districtScope) {
-        setLocalError("Please select your district jurisdiction scope.");
-        return;
-      }
-    } else {
-      if (!barId) {
-        setLocalError("Please enter your State Bar Council registration ID.");
-        return;
-      }
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match.');
+      return;
     }
 
-    const payload = {
+    if (password.length < 8) {
+      setLocalError('Password must be at least 8 characters.');
+      return;
+    }
+
+    const payload: any = {
       username,
       email,
       password,
-      role,
+      role: 'lawyer',
       full_name: fullName,
-      designation: role === 'judge' ? designation : undefined,
-      district_scope: role === 'judge' ? districtScope : undefined,
-      bar_council_id: role === 'lawyer' ? barId : undefined,
     };
 
-    const res = await register(payload);
-    if (res) {
-      setSuccess(true);
+    if (extraField) {
+      payload.bar_council_id = extraField;
+    }
+
+    setSubmitting(true);
+    const success = await register(payload);
+    setSubmitting(false);
+
+    if (success) {
+      navigate('/pending-verification', { state: { fullName } });
     }
   };
 
-  if (success) {
-    return (
-      <div className="auth-container">
-        <div className="auth-card success-card">
-          <div className="success-header">
-            <FaCheckCircle className="success-icon" />
-            <h2>Credentials Requested</h2>
-          </div>
-          <p className="success-msg">
-            Your registration request for Hon'ble Court access as a **{role.toUpperCase()}** has been successfully submitted to the State Administrative Panel.
-          </p>
-          <p className="success-note">
-            Note: Accounts require manual review and verification of credentials (Bar Council ID or judicial designation) before simplejwt token release. You will receive access approval soon.
-          </p>
-          <button className="btn-brass-filled w-full" onClick={() => navigate('/login')}>
-            Return to Login
-          </button>
-        </div>
-        <style>{`
-          .success-card {
-            text-align: center;
-          }
-          .success-icon {
-            color: var(--color-disposed);
-            font-size: 3rem;
-            margin-bottom: 1rem;
-          }
-          .success-header h2 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-          }
-          .success-msg {
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
-            line-height: 1.6;
-          }
-          .success-note {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            background-color: var(--bg-main);
-            padding: 1rem;
-            margin-bottom: 2rem;
-            border-left: 2px solid var(--accent-brass);
-          }
-        `}</style>
-      </div>
-    );
-  }
+  const displayError = localError || error;
 
   return (
-    <div className="auth-container">
-      <div className="auth-card" style={{ maxWidth: '500px' }}>
-        <div className="auth-header">
-          <FaGavel className="auth-logo-icon" />
-          <h2>JusticeWatch</h2>
-          <span className="auth-subtitle">Judicial Registrar Credentials Form</span>
+    <div className="auth-page" style={{ alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <div className="auth-bg-grid" />
+
+      {/* Back */}
+      <Link to="/login" className="back-link" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', zIndex: 20 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
+        </svg>
+        <span>Back to Sign In</span>
+      </Link>
+
+      <div className="auth-form-container auth-form-container--wide animate-fadeInUp">
+        {/* Brand */}
+        <div className="auth-brand">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m16 16 3-8 3 8c-.1.3-.3.5-.6.5h-4.8c-.3 0-.5-.2-.6-.5z" />
+            <path d="m2 16 3-8 3 8c-.1.3-.3.5-.6.5H2.6c-.3 0-.5-.2-.6-.5z" />
+            <path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h18" />
+          </svg>
+          <h2>Create Account</h2>
+          <p>Official Registrar Enrollment</p>
         </div>
 
-        {(error || localError) && (
-          <div className="alert alert-danger">
-            <FaExclamationTriangle className="alert-icon" />
-            <span>{localError || error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="role-toggle-group">
-            <span className="form-label" style={{ marginBottom: '0.25rem' }}>Practitioner Scope</span>
-            <div className="role-buttons">
-              <button
-                type="button"
-                className={`role-btn ${role === 'lawyer' ? 'active' : ''}`}
-                onClick={() => setRole('lawyer')}
-                disabled={loading}
-              >
-                Lawyer / Advocate
-              </button>
-              <button
-                type="button"
-                className={`role-btn ${role === 'judge' ? 'active' : ''}`}
-                onClick={() => setRole('judge')}
-                disabled={loading}
-              >
-                Judge / Magistrate
-              </button>
-            </div>
-          </div>
-
-          <div className="grid-2col" style={{ gap: '1rem', marginBottom: '0px' }}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="username">Username</label>
-              <input
-                type="text"
-                id="username"
-                className="form-control"
-                placeholder="advocate_smith"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="email">Email address</label>
-              <input
-                type="email"
-                id="email"
-                className="form-control"
-                placeholder="name@courts.gov.in"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
+        <form onSubmit={handleSubmit}>
+          {/* Full Name */}
           <div className="form-group">
-            <label className="form-label" htmlFor="fullName">Full Professional Name</label>
-            <input
-              type="text"
-              id="fullName"
-              className="form-control"
-              placeholder="Hon'ble Justice / Advocate Name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              disabled={loading}
-            />
+            <label className="form-label" htmlFor="reg-fullname">Full Official Name</label>
+            <input type="text" id="reg-fullname" className="form-control" value={fullName}
+              onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Mr. Alok K. Sanghavi" required />
           </div>
 
+          {/* Username */}
           <div className="form-group">
-            <label className="form-label" htmlFor="password">Security Password</label>
-            <input
-              type="password"
-              id="password"
-              className="form-control"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
+            <label className="form-label" htmlFor="reg-username">Username</label>
+            <input type="text" id="reg-username" className="form-control" value={username}
+              onChange={(e) => setUsername(e.target.value)} placeholder="e.g. advocate_sanghavi" required />
           </div>
 
-          {/* Conditional Role-Based Fields */}
-          {role === 'judge' ? (
-            <div className="grid-2col" style={{ gap: '1rem', marginBottom: '0px' }}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="designation">Judicial Designation</label>
-                <input
-                  type="text"
-                  id="designation"
-                  className="form-control"
-                  placeholder="e.g. Chief Judicial Magistrate"
-                  value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
+          {/* Email */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="reg-email">Bar Council Email</label>
+            <input type="email" id="reg-email" className="form-control" value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. advocate@barcouncil.in" required />
+          </div>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="districtScope">District Scope (Jurisdiction)</label>
-                <select
-                  id="districtScope"
-                  className="form-control select-control"
-                  value={districtScope}
-                  onChange={(e) => setDistrictScope(e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="">-- Choose District --</option>
-                  {gujaratDistricts.map((d, idx) => (
-                    <option key={idx} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ) : (
+          {/* Bar Council ID field */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="reg-extra">
+              Bar Council Identification Number
+            </label>
+            <input type="text" id="reg-extra" className="form-control" value={extraField}
+              onChange={(e) => setExtraField(e.target.value)}
+              placeholder="e.g. GJ/2384/2016" />
+          </div>
+
+          {/* Passwords */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
-              <label className="form-label" htmlFor="barId">Bar Council Registration ID</label>
-              <input
-                type="text"
-                id="barId"
-                className="form-control"
-                placeholder="e.g. GBC/1402/2014"
-                value={barId}
-                onChange={(e) => setBarId(e.target.value)}
-                disabled={loading}
-              />
+              <label className="form-label" htmlFor="reg-pass">Password</label>
+              <input type="password" id="reg-pass" className="form-control" value={password}
+                onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
+              <input type="password" id="reg-confirm" className="form-control" value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required />
+            </div>
+          </div>
+
+          {/* Error */}
+          {displayError && (
+            <div className="notice notice-error animate-fadeIn" style={{ marginBottom: '1rem' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+              </svg>
+              <span>{displayError}</span>
             </div>
           )}
 
-          <button type="submit" className="btn-brass-filled w-full" style={{ marginTop: '1rem' }} disabled={loading}>
-            {loading ? "Submitting Request..." : "Request Access Credentials"}
+          {/* Verification notice */}
+          <div className="notice notice-info" style={{ marginBottom: '1.25rem' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" />
+            </svg>
+            <div>
+              <strong style={{ display: 'block', fontSize: '0.6rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Verification Mandate</strong>
+              Your account will need to be verified by the court registry before you can sign in.
+            </div>
+          </div>
+
+          <button type="submit" className="btn btn-primary w-full" disabled={submitting} id="register-submit-btn">
+            {submitting ? 'Submitting...' : 'Submit for Registry Review'}
           </button>
         </form>
 
         <div className="auth-footer">
           <p>
-            Already have verified credentials?{' '}
-            <span className="register-link" onClick={() => navigate('/login')}>
-              Sign In Here
-            </span>
+            Already have an active credential?{' '}
+            <Link to="/login" className="btn-link">Sign in</Link>
           </p>
         </div>
       </div>
-
-      <style>{`
-        .role-toggle-group {
-          margin-bottom: 1.5rem;
-        }
-        
-        .role-buttons {
-          display: flex;
-          border: 1px solid var(--border-muted);
-        }
-        
-        .role-btn {
-          flex: 1;
-          padding: 0.65rem;
-          background: transparent;
-          border: none;
-          color: var(--text-muted);
-          font-family: var(--font-sans);
-          font-size: 0.85rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          text-transform: uppercase;
-          letter-spacing: 0.02em;
-        }
-        
-        .role-btn:first-of-type {
-          border-right: 1px solid var(--border-muted);
-        }
-        
-        .role-btn.active {
-          background-color: var(--accent-brass);
-          color: var(--bg-main);
-          font-weight: 600;
-        }
-        
-        .select-control {
-          background-image: linear-gradient(45deg, transparent 50%, var(--accent-brass) 50%), linear-gradient(135deg, var(--accent-brass) 50%, transparent 50%);
-          background-position: calc(100% - 20px) 16px, calc(100% - 15px) 16px;
-          background-size: 5px 5px, 5px 5px;
-          background-repeat: no-repeat;
-          appearance: none;
-        }
-        
-        .select-control option {
-          background-color: var(--bg-card);
-          color: var(--text-main);
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,242 +1,93 @@
-import React from 'react';
-
-export interface DistrictSummaryData {
-  id: number;
-  district_name: string;
-  district_code: string;
-  pending_count: number;
-  disposed_count: number;
-  disposal_rate: number;
-  avg_case_age_days: number;
-  severity_tier: 'low' | 'medium' | 'high' | 'critical';
-}
+import React, { useEffect, useState } from 'react';
+import api from '../services/api';
+import type { DistrictSummary } from '../types';
 
 interface DistrictGridProps {
-  summaries: DistrictSummaryData[];
-  onSelectDistrict: (districtId: number) => void;
   interactive?: boolean;
+  onDistrictClick?: (district: DistrictSummary) => void;
 }
 
-const DistrictGrid: React.FC<DistrictGridProps> = ({ summaries, onSelectDistrict, interactive = true }) => {
-  // Gujarat Districts static list
-  const gujaratDistricts = [
-    { name: 'Ahmedabad', code: 'GJ01' },
-    { name: 'Amreli', code: 'GJ02' },
-    { name: 'Anand', code: 'GJ03' },
-    { name: 'Aravalli', code: 'GJ04' },
-    { name: 'Banaskantha', code: 'GJ05' },
-    { name: 'Bharuch', code: 'GJ06' },
-    { name: 'Bhavnagar', code: 'GJ07' },
-    { name: 'Botad', code: 'GJ08' },
-    { name: 'Chhota Udaipur', code: 'GJ09' },
-    { name: 'Dahod', code: 'GJ10' },
-    { name: 'Dang', code: 'GJ11' },
-    { name: 'Devbhoomi Dwarka', code: 'GJ12' },
-    { name: 'Gandhinagar', code: 'GJ13' },
-    { name: 'Gir Somnath', code: 'GJ14' },
-    { name: 'Jamnagar', code: 'GJ15' },
-    { name: 'Junagadh', code: 'GJ16' },
-    { name: 'Kheda', code: 'GJ17' },
-    { name: 'Kutch', code: 'GJ18' },
-    { name: 'Mahisagar', code: 'GJ19' },
-    { name: 'Mehsana', code: 'GJ20' },
-    { name: 'Morbi', code: 'GJ21' },
-    { name: 'Narmada', code: 'GJ22' },
-    { name: 'Navsari', code: 'GJ23' },
-    { name: 'Panchmahal', code: 'GJ24' },
-    { name: 'Patan', code: 'GJ25' },
-    { name: 'Porbandar', code: 'GJ26' },
-    { name: 'Rajkot', code: 'GJ27' },
-    { name: 'Sabarkantha', code: 'GJ28' },
-    { name: 'Surat', code: 'GJ29' },
-    { name: 'Surendranagar', code: 'GJ30' },
-    { name: 'Tapi', code: 'GJ31' },
-    { name: 'Vadodara', code: 'GJ32' },
-    { name: 'Valsad', code: 'GJ33' },
-  ];
+const DistrictGrid: React.FC<DistrictGridProps> = ({ interactive = true, onDistrictClick }) => {
+  const [districts, setDistricts] = useState<DistrictSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Helper to match static districts with summaries
-  const getSeverity = (dName: string): 'low' | 'medium' | 'high' | 'critical' => {
-    const summary = summaries.find(s => s.district_name.toLowerCase() === dName.toLowerCase());
-    return summary ? summary.severity_tier : 'low';
-  };
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      try {
+        const res = await api.get('/districts/summary/');
+        setDistricts(res.data);
+      } catch (err) {
+        console.error('Failed to fetch district summaries:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDistricts();
+  }, []);
 
-  const getDistrictSummaryId = (dName: string): number | null => {
-    const summary = summaries.find(s => s.district_name.toLowerCase() === dName.toLowerCase());
-    return summary ? summary.id : null;
+  if (loading) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <div className="spinner" style={{ margin: '0 auto' }} />
+      </div>
+    );
+  }
+
+  if (districts.length === 0) {
+    return (
+      <div className="empty-state">
+        <p>No district data available. Run the summary computation first.</p>
+      </div>
+    );
+  }
+
+  const handleClick = (d: DistrictSummary) => {
+    if (interactive && onDistrictClick) {
+      onDistrictClick(d);
+    }
   };
 
   return (
-    <div className="grid-section">
-      <div className="grid-title-row">
-        <h3>Gujarat Backlog Severity Index</h3>
-        <p className="subtitle">{interactive ? "Click a district square to view local analytics breakdown." : "Visual index of administrative caseload density."}</p>
-      </div>
-
-      <div className="gujarat-grid">
-        {gujaratDistricts.map((district) => {
-          const severity = getSeverity(district.name);
-          const summaryId = getDistrictSummaryId(district.name);
-          const blockClass = `grid-block severity-${severity} ${interactive && summaryId ? 'clickable' : ''}`;
-
-          const handleClick = () => {
-            if (interactive && summaryId) {
-              onSelectDistrict(summaryId);
-            }
-          };
-
-          return (
-            <div 
-              key={district.code} 
-              className={blockClass}
-              onClick={handleClick}
-              title={`${district.name} - Severity: ${severity.toUpperCase()}`}
-            >
-              <span className="block-code">{district.code}</span>
-              <span className="block-name">{district.name}</span>
+    <div>
+      <div className="district-grid">
+        {districts.map((d) => (
+          <div
+            key={d.id}
+            className={`district-tile district-tile--${d.severity_tier}`}
+            onClick={() => handleClick(d)}
+            style={{ cursor: interactive ? 'pointer' : 'default' }}
+            title={`${d.district_name} — ${d.pending_count} pending`}
+          >
+            <div className="district-tile-name">{d.district_name}</div>
+            <div>
+              <div className="district-tile-stat-label">Pending</div>
+              <div className="district-tile-stat-value">{d.pending_count.toLocaleString()}</div>
             </div>
-          );
-        })}
+            {d.severity_tier === 'critical' && <div className="pulse-dot" />}
+          </div>
+        ))}
       </div>
 
-      {/* Grid Legend */}
-      <div className="grid-legend">
-        <div className="legend-item">
-          <span className="legend-dot severity-low"></span>
-          <span>Low Severity</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot severity-medium"></span>
-          <span>Medium Severity</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot severity-high"></span>
-          <span>High Severity</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot severity-critical"></span>
-          <span>Critical Severity</span>
-        </div>
+      {/* Legend */}
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem',
+        paddingTop: '0.75rem', marginTop: '0.75rem', borderTop: '1px solid var(--border-subtle)',
+        fontSize: '0.6rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em'
+      }}>
+        <span style={{ fontWeight: 600, color: 'var(--text-faint)' }}>Load Index:</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--severity-low-bg)', border: '1px solid var(--severity-low-border)' }} /> Low
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--severity-medium-bg)', border: '1px solid var(--severity-medium-border)' }} /> Medium
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--severity-high-bg)', border: '1px solid var(--severity-high-border)' }} /> High
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '10px', height: '10px', backgroundColor: 'var(--severity-critical-bg)', border: '1px solid var(--severity-critical-border)' }} /> Critical
+        </span>
       </div>
-
-      <style>{`
-        .grid-section {
-          margin-bottom: 2.5rem;
-        }
-        
-        .grid-title-row {
-          margin-bottom: 1.5rem;
-        }
-        
-        .grid-title-row h3 {
-          font-size: 1.15rem;
-          color: var(--accent-brass);
-          text-transform: uppercase;
-        }
-        
-        .grid-title-row .subtitle {
-          font-size: 0.85rem;
-          color: var(--text-muted);
-        }
-        
-        .gujarat-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
-          gap: 0.75rem;
-          margin-bottom: 1.5rem;
-        }
-        
-        .grid-block {
-          background-color: var(--bg-card);
-          border: 1px solid var(--border-muted);
-          padding: 1rem 0.5rem;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 85px;
-          text-align: center;
-          transition: all 0.3s ease;
-          position: relative;
-        }
-        
-        .grid-block::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          height: 3px;
-        }
-        
-        .grid-block.clickable {
-          cursor: pointer;
-        }
-        
-        .grid-block.clickable:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-          border-color: var(--accent-brass);
-        }
-        
-        .block-code {
-          font-family: var(--font-mono);
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: var(--text-main);
-        }
-        
-        .block-name {
-          font-size: 0.7rem;
-          text-transform: uppercase;
-          color: var(--text-muted);
-          letter-spacing: 0.02em;
-          margin-top: 0.25rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          width: 100%;
-        }
-        
-        /* Severity color classes */
-        .severity-low::after, .legend-dot.severity-low {
-          background-color: var(--color-disposed);
-        }
-        .severity-medium::after, .legend-dot.severity-medium {
-          background-color: var(--color-pending);
-        }
-        .severity-high::after, .legend-dot.severity-high {
-          background-color: var(--color-stayed);
-        }
-        .severity-critical::after, .legend-dot.severity-critical {
-          background-color: var(--color-critical);
-        }
-        
-        .grid-legend {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 1.5rem;
-          padding: 1rem;
-          border: 1px dashed var(--border-muted);
-          background-color: rgba(23, 30, 39, 0.3);
-        }
-        
-        .legend-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.8rem;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        
-        .legend-dot {
-          width: 10px;
-          height: 10px;
-          display: inline-block;
-        }
-      `}</style>
     </div>
   );
 };

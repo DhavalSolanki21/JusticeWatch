@@ -2,328 +2,321 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import type { CaseListItem, SystemOverview } from '../types';
 import StatCard from '../components/StatCard';
-import DistrictGrid, { type DistrictSummaryData } from '../components/DistrictGrid';
-import DistrictPopup from '../components/DistrictPopup';
+import DistrictGrid from '../components/DistrictGrid';
+import DistrictModal from '../components/DistrictModal';
+import DifficultyBadge from '../components/DifficultyBadge';
+import type { DistrictSummary } from '../types';
 
-interface OverviewStats {
-  total_cases: number;
-  pending_cases: number;
-  status_breakdown: Record<string, number>;
-  difficulty_breakdown: Record<string, number>;
-  top_congested_districts: Record<string, number>;
-}
+const FileTextIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />
+  </svg>
+);
 
-interface CaseItem {
-  id: number;
-  case_number: string;
-  district_name: string;
-  court_name: string;
-  case_category: string;
-  crime_type: string | null;
-  case_status: string;
-  chargesheet_status: string;
-  difficulty_tier: 'low' | 'medium' | 'high' | 'critical';
-  filed_date: string;
-}
+const ChevronRight = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  const [summaries, setSummaries] = useState<DistrictSummaryData[]>([]);
-  const [overview, setOverview] = useState<OverviewStats | null>(null);
-  const [cases, setCases] = useState<CaseItem[]>([]);
-  const [selectedSummaryId, setSelectedSummaryId] = useState<number | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const [overview, setOverview] = useState<SystemOverview | null>(null);
+  const [districts, setDistricts] = useState<DistrictSummary[]>([]);
+  const [escalationCases, setEscalationCases] = useState<CaseListItem[]>([]);
+  const [myCases, setMyCases] = useState<CaseListItem[]>([]);
+  const [selectedDistrict, setSelectedDistrict] = useState<DistrictSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const isJudge = user?.role === 'judge';
 
   useEffect(() => {
-    if (!user) return;
-
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchData = async () => {
       try {
-        // 1. Fetch District Summaries (for the Grid)
-        const summaryRes = await api.get('/districts/summary/');
-        setSummaries(summaryRes.data);
-
-        // 2. Fetch role-specific details
-        if (user.role === 'judge') {
-          // Fetch overall overview stats
-          const overviewRes = await api.get('/analytics/overview/');
+        if (isJudge) {
+          // Judge: fetch analytics overview + top critical cases
+          const [overviewRes, districtRes, casesRes] = await Promise.all([
+            api.get('/analytics/overview/'),
+            api.get('/districts/summary/'),
+            api.get('/cases/', { params: { case_status: 'Pending', ordering: '-difficulty_score', page_size: 5 } })
+          ]);
           setOverview(overviewRes.data);
-
-          // Fetch recent cases list
-          const casesRes = await api.get('/cases/');
-          setCases(casesRes.data.slice(0, 5)); // Take top 5 recent cases
-        } else if (user.role === 'lawyer') {
-          // Fetch lawyer's assigned cases
-          const casesRes = await api.get('/cases/');
-          setCases(casesRes.data);
+          setDistricts(districtRes.data);
+          setEscalationCases(casesRes.data.results || casesRes.data);
+        } else {
+          // Lawyer: fetch their own cases
+          const [casesRes, districtRes] = await Promise.all([
+            api.get('/cases/'),
+            api.get('/districts/summary/')
+          ]);
+          const cases = casesRes.data.results || casesRes.data;
+          setMyCases(cases);
+          setDistricts(districtRes.data);
         }
-      } catch (err: any) {
-        console.error("Dashboard fetch error:", err);
-        setError("Failed to synchronize caseload analytics. Please check backend connection.");
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
+    fetchData();
+  }, [isJudge]);
 
-    fetchDashboardData();
-  }, [user]);
+  if (loading) {
+    return (
+      <div className="main-content" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
-  if (!user) return null;
+  // Compute lawyer stats
+  const lawyerCaseCount = myCases.length;
+  const hearingsCount = myCases.filter(c => c.case_status === 'Pending').length;
+  const highComplexity = myCases.filter(c => c.difficulty_tier === 'critical' || c.difficulty_tier === 'high').length;
+  const pendingChargesheet = myCases.filter(c => c.chargesheet_status === 'Not Filed' || c.chargesheet_status === 'Under Review').length;
 
-  // Selected summary for Popup
-  const activeSummary = summaries.find(s => s.id === selectedSummaryId);
+  // Compute judge stats
+  const criticalDistricts = districts.filter(d => d.severity_tier === 'critical').length;
 
-  // Stats computation for Judge
-  const judgeTotal = overview?.total_cases ?? 0;
-  const judgePending = overview?.pending_cases ?? 0;
-  const judgeDisposed = judgeTotal - judgePending;
-  const judgeRate = judgeTotal > 0 ? ((judgeDisposed / judgeTotal) * 100).toFixed(0) + "%" : "0%";
-  const criticalDistrictsCount = summaries.filter(s => s.severity_tier === 'critical').length;
-
-  // Stats computation for Lawyer
-  const lawyerTotal = cases.length;
-  const lawyerPending = cases.filter(c => c.case_status === 'Pending').length;
-  const lawyerDisposed = cases.filter(c => c.case_status === 'Disposed').length;
-  const lawyerStayed = cases.filter(c => c.case_status === 'Stayed').length;
+  const getChargesheetBadge = (status: string) => {
+    switch (status) {
+      case 'Filed':
+      case 'Trial':
+        return 'badge badge-filed';
+      case 'Not Filed':
+        return 'badge badge-not-filed';
+      default:
+        return 'badge badge-pending';
+    }
+  };
 
   return (
     <div className="main-content">
-      {/* Welcome Header */}
-      <div className="dashboard-header">
-        <span className="subtitle">Judicial Analytics Workspace</span>
-        {user.role === 'judge' ? (
-          <h1>Hon'ble Judge {user.full_name}</h1>
-        ) : (
-          <h1>Advocate {user.full_name}</h1>
+      <div className="page-wrapper animate-fadeInUp">
+        {/* Page Header */}
+        <div className="page-header">
+          <div className="page-header-info">
+            <h1 id="dashboard-title">
+              {isJudge ? 'State Caseload Command Center' : 'Advocate Caseload Workbench'}
+            </h1>
+            <p className="page-header-meta">
+              {isJudge
+                ? 'Gujarat District Courts — Aggregate pendency and escalation monitoring'
+                : 'Bar Council Registry — Assigned cases, scheduling, and litigation filings'}
+            </p>
+          </div>
+          <div className="notice notice-info" style={{ padding: '0.5rem 0.75rem', fontSize: '0.7rem' }}>
+            Welcome, {isJudge ? 'Hon\'ble Justice' : 'Advocate'} {user?.full_name?.split(' ').slice(-1)[0]}
+          </div>
+        </div>
+
+        {/* ======================== JUDGE VIEW ======================== */}
+        {isJudge && overview && (
+          <>
+            {/* Stats */}
+            <div className="stat-grid">
+              <StatCard
+                label="Total Pending Cases"
+                value={overview.pending_cases}
+                footer="State Aggregate"
+                valueClass="stat-value--accent"
+              />
+              <StatCard
+                label="Total Disposed"
+                value={overview.total_cases - overview.pending_cases}
+                footer="Confirmed Closures"
+                valueClass="stat-value--success"
+              />
+              <StatCard
+                label="Districts Monitored"
+                value={districts.length}
+                footer="Active Court Zones"
+              />
+              <StatCard
+                label="Critical Backlog Zones"
+                value={criticalDistricts}
+                footer="Requires Urgent Action"
+                valueClass="stat-value--danger"
+              />
+            </div>
+
+            {/* District Grid */}
+            <div className="jw-card" style={{ marginBottom: '2rem' }}>
+              <div className="jw-card-header">
+                <div>
+                  <h2 className="jw-card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" />
+                    </svg>
+                    Gujarat Districts — Severity Heatmap
+                  </h2>
+                  <p className="jw-card-subtitle">Click any district tile for case breakdown</p>
+                </div>
+              </div>
+              <DistrictGrid
+                interactive={true}
+                onDistrictClick={(d) => setSelectedDistrict(d)}
+              />
+            </div>
+
+            {/* Critical Escalation Watch */}
+            <div className="jw-card">
+              <div className="jw-card-header">
+                <div>
+                  <h2 className="jw-card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+                    </svg>
+                    Critical Backlog Escalation Watch
+                  </h2>
+                  <p className="jw-card-subtitle">Top 5 highest-difficulty pending cases in the state</p>
+                </div>
+                <button className="btn btn-ghost" onClick={() => navigate('/search')} id="view-all-cases-btn">
+                  View All Cases <ChevronRight />
+                </button>
+              </div>
+
+              {escalationCases.length === 0 ? (
+                <div className="empty-state"><p>No pending cases found.</p></div>
+              ) : (
+                <div className="jw-table-wrapper">
+                  <table className="jw-table">
+                    <thead>
+                      <tr>
+                        <th>Case Reference</th>
+                        <th>District</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Complexity</th>
+                        <th className="text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {escalationCases.map((c) => (
+                        <tr key={c.id} className="clickable" onClick={() => navigate(`/cases/${c.id}`)}>
+                          <td>
+                            <span className="td-case-no"><FileTextIcon /> {c.case_number}</span>
+                          </td>
+                          <td>{c.district_name}</td>
+                          <td>{c.case_category}</td>
+                          <td><span className="badge badge-pending">{c.case_status}</span></td>
+                          <td><DifficultyBadge tier={c.difficulty_tier} /></td>
+                          <td className="text-right">
+                            <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/cases/${c.id}`); }}>
+                              Inspect <ChevronRight />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
         )}
-        <p className="scope-info text-muted">
-          {user.role === 'judge' 
-            ? `Jurisdiction scope: ${user.district_scope ? `${user.district_scope} District Courts` : 'All Gujarat Courts'}`
-            : `Bar Registration: ${user.username.toUpperCase()} | Authorized Practitioner Panel`
-          }
-        </p>
+
+        {/* ======================== LAWYER VIEW ======================== */}
+        {!isJudge && (
+          <>
+            {/* Stats */}
+            <div className="stat-grid">
+              <StatCard label="Cases Assigned to Me" value={lawyerCaseCount} footer="Active Advocacy Records" valueClass="stat-value--accent" />
+              <StatCard label="Pending Hearings" value={hearingsCount} footer="Required Court Appearances" />
+              <StatCard label="Complexity Flags" value={highComplexity} footer="High Complexity Trials" valueClass="stat-value--warning" />
+              <StatCard label="Pending Chargesheets" value={pendingChargesheet} footer="Required Procedural Actions" valueClass="stat-value--danger" />
+            </div>
+
+            {/* Static District Grid (Read-Only for Lawyers) */}
+            <div className="jw-card" style={{ marginBottom: '2rem' }}>
+              <div className="jw-card-header">
+                <div>
+                  <h2 className="jw-card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" />
+                    </svg>
+                    Gujarat Courts Reference Matrix (Read-Only)
+                  </h2>
+                  <p className="jw-card-subtitle">Caseload density of the court districts. Contact the registrar for transfers.</p>
+                </div>
+              </div>
+              <DistrictGrid interactive={false} />
+            </div>
+
+            {/* My Cases Table */}
+            <div className="jw-card">
+              <div className="jw-card-header">
+                <div>
+                  <h2 className="jw-card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    </svg>
+                    Assigned Litigation Cases
+                  </h2>
+                  <p className="jw-card-subtitle">Select any file to update statuses, hearings, or case folders</p>
+                </div>
+              </div>
+
+              {myCases.length === 0 ? (
+                <div className="empty-state">
+                  <FileTextIcon />
+                  <p>No active assignments identified under your Bar Council ID.</p>
+                </div>
+              ) : (
+                <div className="jw-table-wrapper">
+                  <table className="jw-table">
+                    <thead>
+                      <tr>
+                        <th>Case Reference</th>
+                        <th>District</th>
+                        <th>Crime Type</th>
+                        <th>Chargesheet</th>
+                        <th>Complexity</th>
+                        <th className="text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myCases.map((c) => (
+                        <tr key={c.id} className="clickable" onClick={() => navigate(`/cases/${c.id}`)}>
+                          <td>
+                            <span className="td-case-no"><FileTextIcon /> {c.case_number}</span>
+                          </td>
+                          <td>{c.district_name}</td>
+                          <td className="td-mono">{c.crime_type || '—'}</td>
+                          <td><span className={getChargesheetBadge(c.chargesheet_status)}>{c.chargesheet_status}</span></td>
+                          <td><DifficultyBadge tier={c.difficulty_tier} /></td>
+                          <td className="text-right">
+                            <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); navigate(`/cases/${c.id}`); }}>
+                              Manage <ChevronRight />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      <hr className="divider" />
-
-      {error && (
-        <div className="alert alert-danger" style={{ marginBottom: '2rem' }}>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="loading-container" style={{ margin: 'auto' }}>
-          <div className="spinner"></div>
-          <p>Syncing court aggregates and predictive difficulty mapping...</p>
-        </div>
-      ) : (
-        <div className="dashboard-layout">
-          {user.role === 'judge' ? (
-            /* ==========================================
-               JUDGE DASHBOARD
-               ========================================== */
-            <>
-              {/* Stat Cards */}
-              <div className="stat-grid">
-                <StatCard label="Total Monitored Cases" value={judgeTotal} />
-                <StatCard label="Active Pending Caseload" value={judgePending} />
-                <StatCard label="Overall Disposal Rate" value={judgeRate} />
-                <StatCard label="Critical Backlog Districts" value={criticalDistrictsCount} />
-              </div>
-
-              {/* Gujarat clickable severity grid */}
-              <div className="jw-card">
-                <DistrictGrid 
-                  summaries={summaries} 
-                  onSelectDistrict={(id) => setSelectedSummaryId(id)} 
-                  interactive={true}
-                />
-              </div>
-
-              {/* High-priority cases list */}
-              <div className="jw-card">
-                <div className="card-header-row">
-                  <h3>Recent High-Priority Pendencies</h3>
-                  <button className="btn-brass" onClick={() => navigate('/search')}>Search Cases</button>
-                </div>
-                {cases.length === 0 ? (
-                  <p className="no-cases text-muted">No pending cases found in your jurisdiction.</p>
-                ) : (
-                  <div className="jw-table-container" style={{ border: 'none', margin: '1rem 0 0 0' }}>
-                    <table className="jw-table">
-                      <thead>
-                        <tr>
-                          <th>Case CNR Number</th>
-                          <th>District</th>
-                          <th>Category</th>
-                          <th>Status</th>
-                          <th>Caseload Severity</th>
-                          <th style={{ textAlign: 'right' }}>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cases.map((c) => (
-                          <tr key={c.id}>
-                            <td className="case-no-mono">{c.case_number}</td>
-                            <td>{c.district_name}</td>
-                            <td>{c.case_category}</td>
-                            <td>{c.case_status}</td>
-                            <td>
-                              <span className={`badge badge-${c.difficulty_tier}`}>{c.difficulty_tier}</span>
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button 
-                                className="btn-brass" 
-                                style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}
-                                onClick={() => navigate(`/cases/${c.id}`)}
-                              >
-                                View File
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            /* ==========================================
-               LAWYER DASHBOARD
-               ========================================== */
-            <>
-              {/* Stat Cards */}
-              <div className="stat-grid">
-                <StatCard label="Assigned Litigations" value={lawyerTotal} />
-                <StatCard label="Active Pending Trials" value={lawyerPending} />
-                <StatCard label="Disposed Files" value={lawyerDisposed} />
-                <StatCard label="Stayed Procedures" value={lawyerStayed} />
-              </div>
-
-              {/* Gujarat static grid */}
-              <div className="jw-card">
-                <DistrictGrid 
-                  summaries={summaries} 
-                  onSelectDistrict={() => {}} 
-                  interactive={false}
-                />
-              </div>
-
-              {/* Assigned Cases List */}
-              <div className="jw-card">
-                <div className="card-header-row">
-                  <h3>My Active Caseload Assignments</h3>
-                  <button className="btn-brass" onClick={() => navigate('/search')}>Search Files</button>
-                </div>
-                {cases.length === 0 ? (
-                  <p className="no-cases text-muted">You are not currently assigned representing counsel on any active cases.</p>
-                ) : (
-                  <div className="jw-table-container" style={{ border: 'none', margin: '1rem 0 0 0' }}>
-                    <table className="jw-table">
-                      <thead>
-                        <tr>
-                          <th>Case CNR Number</th>
-                          <th>Court</th>
-                          <th>Category</th>
-                          <th>Status</th>
-                          <th>Complexity Tier</th>
-                          <th style={{ textAlign: 'right' }}>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cases.map((c) => (
-                          <tr key={c.id}>
-                            <td className="case-no-mono">{c.case_number}</td>
-                            <td>{c.court_name}</td>
-                            <td>{c.case_category}</td>
-                            <td>{c.case_status}</td>
-                            <td>
-                              <span className={`badge badge-${c.difficulty_tier}`}>{c.difficulty_tier}</span>
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button 
-                                className="btn-brass" 
-                                style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}
-                                onClick={() => navigate(`/cases/${c.id}`)}
-                              >
-                                Access Brief
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Selected District Breakdown Popup */}
-      {activeSummary && (
-        <DistrictPopup
-          summaryId={activeSummary.id}
-          districtName={activeSummary.district_name}
-          severityTier={activeSummary.severity_tier}
-          pendingCount={activeSummary.pending_count}
-          disposedCount={activeSummary.disposed_count}
-          disposalRate={activeSummary.disposal_rate}
-          onClose={() => setSelectedSummaryId(null)}
+      {/* District Modal */}
+      {selectedDistrict && (
+        <DistrictModal
+          district={selectedDistrict}
+          onClose={() => setSelectedDistrict(null)}
+          onAuditCases={(districtName) => {
+            setSelectedDistrict(null);
+            navigate(`/search?district=${encodeURIComponent(districtName)}`);
+          }}
         />
       )}
-
-      <style>{`
-        .dashboard-header h1 {
-          font-size: 2.25rem;
-          margin-bottom: 0.25rem;
-        }
-        
-        .dashboard-header .subtitle {
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          color: var(--accent-brass);
-          letter-spacing: 0.1em;
-          font-weight: 600;
-        }
-        
-        .scope-info {
-          font-size: 0.85rem;
-          letter-spacing: 0.02em;
-          text-transform: uppercase;
-        }
-        
-        .card-header-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1rem;
-          border-bottom: 1px solid var(--border-muted);
-          padding-bottom: 0.5rem;
-        }
-        
-        .card-header-row h3 {
-          font-size: 1rem;
-          text-transform: uppercase;
-          color: var(--accent-brass);
-          letter-spacing: 0.05em;
-        }
-        
-        .no-cases {
-          text-align: center;
-          padding: 2rem 0;
-          font-size: 0.9rem;
-        }
-      `}</style>
     </div>
   );
 };

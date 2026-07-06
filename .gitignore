@@ -15,8 +15,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-db.sqlite3
-db.sqlite3-journal
 
 # --- Node / React Frontend ---
 frontend/node_modules/
@@ -51,3 +49,6 @@ pnpm-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# --- Gemini AI ---
+GEMINI.md

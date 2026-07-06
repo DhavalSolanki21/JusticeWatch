@@ -1,210 +1,132 @@
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaGavel, FaExclamationTriangle } from 'react-icons/fa';
+
+const ScaleIcon = () => (
+  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m16 16 3-8 3 8c-.1.3-.3.5-.6.5h-4.8c-.3 0-.5-.2-.6-.5z" />
+    <path d="m2 16 3-8 3 8c-.1.3-.3.5-.6.5H2.6c-.3 0-.5-.2-.6-.5z" />
+    <path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h18" />
+  </svg>
+);
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
-  const { login, error, loading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { login, error, clearError } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const sessionExpired = searchParams.get('expired') === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
-    
+    clearError();
+
     if (!username || !password) {
-      setLocalError("Please enter both username and password.");
+      setLocalError('Please fill in all security fields.');
       return;
     }
 
+    setSubmitting(true);
     const success = await login(username, password);
+    setSubmitting(false);
+
     if (success) {
       navigate('/dashboard');
     }
   };
 
+  const displayError = localError || error;
+
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <FaGavel className="auth-logo-icon" />
+    <div className="auth-page" style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <div className="auth-bg-grid" />
+
+      {/* Back button */}
+      <Link to="/" className="back-link" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', zIndex: 20 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
+        </svg>
+        <span>Back</span>
+      </Link>
+
+      <div className="auth-form-container animate-fadeInUp">
+        {/* Brand */}
+        <div className="auth-brand">
+          <ScaleIcon />
           <h2>JusticeWatch</h2>
-          <span className="auth-subtitle"> Gujarat Judiciary Login</span>
+          <p>Judicial Records Entry Point</p>
         </div>
 
-        {sessionExpired && (
-          <div className="alert alert-info">
-            <FaExclamationTriangle className="alert-icon" />
-            <span>Session expired. Please log in again.</span>
-          </div>
-        )}
-
-        {(error || localError) && (
-          <div className="alert alert-danger">
-            <FaExclamationTriangle className="alert-icon" />
-            <span>{localError || error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="auth-form">
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label" htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              className="form-control"
-              placeholder="e.g. judge0 or lawyer0"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={loading}
-              autoComplete="username"
-            />
+            <label className="form-label" htmlFor="login-username">Username</label>
+            <div className="form-icon-wrapper">
+              <svg className="form-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+              </svg>
+              <input
+                type="text"
+                id="login-username"
+                className="form-control form-control--with-icon"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                autoComplete="username"
+                required
+              />
+            </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              className="form-control"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              autoComplete="current-password"
-            />
+            <label className="form-label" htmlFor="login-password">Access Password</label>
+            <div className="form-icon-wrapper">
+              <svg className="form-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <input
+                type="password"
+                id="login-password"
+                className="form-control form-control--with-icon"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                autoComplete="current-password"
+                required
+              />
+            </div>
           </div>
 
-          <button type="submit" className="btn-brass-filled w-full" disabled={loading}>
-            {loading ? "Authenticating..." : "Enter Portal"}
+          {/* Error */}
+          {displayError && (
+            <div className="notice notice-error animate-fadeIn" style={{ marginBottom: '1rem' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+              </svg>
+              <span>{displayError}</span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary w-full"
+            disabled={submitting}
+            id="login-submit-btn"
+          >
+            {submitting ? 'Authenticating...' : 'Authenticate Credentials'}
           </button>
         </form>
 
+        {/* Footer */}
         <div className="auth-footer">
           <p>
-            New practitioner?{' '}
-            <span className="register-link" onClick={() => navigate('/register')}>
-              Request Access Credentials
-            </span>
+            New to the judiciary analytics system?{' '}
+            <Link to="/register" className="btn-link" id="goto-register-btn">Register here</Link>
           </p>
         </div>
       </div>
-
-      <style>{`
-        .auth-container {
-          min-height: 100vh;
-          background-color: var(--bg-main);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 2rem;
-        }
-        
-        .auth-card {
-          background-color: var(--bg-card);
-          border: 1px solid var(--border-brass);
-          width: 100%;
-          max-width: 440px;
-          padding: 3rem 2.5rem;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-          position: relative;
-        }
-        
-        .auth-card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 3px;
-          background-color: var(--accent-brass);
-        }
-        
-        .auth-header {
-          text-align: center;
-          margin-bottom: 2rem;
-        }
-        
-        .auth-logo-icon {
-          color: var(--accent-brass);
-          font-size: 2.25rem;
-          margin-bottom: 0.5rem;
-        }
-        
-        .auth-header h2 {
-          font-size: 1.5rem;
-          color: var(--text-main);
-        }
-        
-        .auth-subtitle {
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          color: var(--accent-brass);
-          letter-spacing: 0.1em;
-          display: block;
-          margin-top: 0.25rem;
-        }
-        
-        .alert {
-          padding: 0.85rem 1rem;
-          border-left: 3px solid;
-          margin-bottom: 1.5rem;
-          font-size: 0.85rem;
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-        }
-        
-        .alert-icon {
-          font-size: 1rem;
-          flex-shrink: 0;
-        }
-        
-        .alert-danger {
-          background-color: rgba(192, 57, 43, 0.1);
-          border-color: var(--color-critical);
-          color: #E74C3C;
-        }
-        
-        .alert-info {
-          background-color: rgba(210, 150, 60, 0.1);
-          border-color: var(--color-pending);
-          color: #F1C40F;
-        }
-        
-        .auth-form {
-          margin-bottom: 1.5rem;
-        }
-        
-        .auth-footer {
-          text-align: center;
-          font-size: 0.85rem;
-          color: var(--text-muted);
-          border-top: 1px solid var(--border-muted);
-          padding-top: 1.5rem;
-          margin-top: 1.5rem;
-        }
-        
-        .register-link {
-          color: var(--accent-brass);
-          cursor: pointer;
-          font-weight: 500;
-          text-decoration: underline;
-          transition: color 0.2s ease;
-        }
-        
-        .register-link:hover {
-          color: var(--accent-brass-hover);
-        }
-        
-        .w-full {
-          width: 100%;
-        }
-      `}</style>
     </div>
   );
 };
