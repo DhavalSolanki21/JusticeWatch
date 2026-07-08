@@ -43,7 +43,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
-class UserProfileSerializer(serializers.ModelSerializer):
+class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'full_name', 'district_scope', 'is_verified')
+        fields = ('display_name', 'email', 'photo')
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    district_name = serializers.CharField(source='district_scope.name', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'role', 'full_name', 'display_name', 'photo', 'district_scope', 'district_name', 'is_verified')
+

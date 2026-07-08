@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import type { CaseListItem } from '../types';
@@ -45,7 +45,7 @@ const CaseSearch: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  const fetchCases = async () => {
+  const fetchCases = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -68,17 +68,17 @@ const CaseSearch: React.FC = () => {
         setTotalCount(res.data.length);
         setTotalPages(1);
       }
-    } catch (err) {
-      console.error('Failed to fetch cases:', err);
+    } catch {
+      console.error('Failed to fetch cases');
       setError('Failed to retrieve case registry data.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, category, status, district]);
 
   useEffect(() => {
     fetchCases();
-  }, [page]); // Re-fetch on page change
+  }, [fetchCases]); // Re-fetch on dependencies change
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

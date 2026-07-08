@@ -44,7 +44,7 @@ api.interceptors.response.use(
           }
           
           return api(originalRequest);
-        } catch (refreshError) {
+        } catch {
           // Refresh token expired or invalid, log out
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');

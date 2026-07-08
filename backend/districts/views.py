@@ -42,3 +42,19 @@ class DistrictBreakdownView(APIView):
         }
         
         return Response(data)
+
+from .models import State
+
+class StateListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        states = State.objects.all().values('id', 'name', 'code')
+        return Response(list(states))
+
+class DistrictListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        districts = District.objects.all().values('id', 'name', 'code', 'state_id')
+        return Response(list(districts))

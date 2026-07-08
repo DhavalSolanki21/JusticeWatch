@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import type { CaseDetail as CaseDetailType, DifficultyBreakdown, Hearing } from '../types';
+import type { CaseDetail as CaseDetailType, CasePrediction, Hearing } from '../types';
 import DifficultyBadge from '../components/DifficultyBadge';
 import HearingTimeline from '../components/HearingTimeline';
 
@@ -18,7 +18,7 @@ const CaseDetail: React.FC = () => {
   const navigate = useNavigate();
 
   const [caseItem, setCaseItem] = useState<CaseDetailType | null>(null);
-  const [difficulty, setDifficulty] = useState<DifficultyBreakdown | null>(null);
+  const [prediction, setPrediction] = useState<CasePrediction | null>(null);
   const [hearings, setHearings] = useState<Hearing[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -32,12 +32,12 @@ const CaseDetail: React.FC = () => {
       try {
         const [caseRes, diffRes, hearingRes] = await Promise.all([
           api.get(`/cases/${id}/`),
-          api.get(`/cases/${id}/difficulty_breakdown/`),
+          api.get(`/cases/${id}/predict/`),
           api.get(`/timeline/?case=${id}`)
         ]);
         
         setCaseItem(caseRes.data);
-        setDifficulty(diffRes.data);
+        setPrediction(diffRes.data);
         setHearings(hearingRes.data.results || hearingRes.data);
         
         setEditChargesheet(caseRes.data.chargesheet_status);
@@ -200,37 +200,52 @@ const CaseDetail: React.FC = () => {
           {/* Right Column */}
           <div className="flex-col space-y-2">
             
-            {/* Difficulty Assessment */}
-            {difficulty && (
+            {/* Case Predictions */}
+            {prediction && !prediction.error && (
               <div className="jw-card jw-card--accent">
                 <div className="jw-card-header">
-                  <h2 className="jw-card-title">Difficulty Assessment</h2>
+                  <h2 className="jw-card-title">AI Case Prediction</h2>
                 </div>
-                <div className="difficulty-meter mb-2">
-                  <div style={{ fontSize: '0.6rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Estimated Trial Burden</div>
-                  <div className={`difficulty-score difficulty-score--${difficulty.difficulty_tier}`}>
-                    {difficulty.difficulty_score ? `${(difficulty.difficulty_score * 100).toFixed(0)}%` : 'N/A'}
+                
+                <div className="grid-2-1" style={{ gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="difficulty-meter">
+                    <div style={{ fontSize: '0.6rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Duration Risk</div>
+                    <div className={`difficulty-score difficulty-score--${prediction.duration_risk}`}>
+                      {prediction.duration_risk.toUpperCase()}
+                    </div>
+                    <div className="progress-track mt-1 mb-1">
+                      <div className={`progress-fill progress-fill--${prediction.duration_risk === 'critical' ? 'danger' : prediction.duration_risk === 'high' ? 'warning' : 'success'}`} 
+                           style={{ width: `${prediction.duration_confidence}%` }} />
+                    </div>
+                    <div className="difficulty-tier-label">Confidence: {prediction.duration_confidence}%</div>
                   </div>
-                  <div className="progress-track mt-1 mb-1">
-                    <div className={`progress-fill progress-fill--${difficulty.difficulty_tier === 'critical' ? 'danger' : difficulty.difficulty_tier === 'high' ? 'warning' : 'success'}`} 
-                         style={{ width: `${(difficulty.difficulty_score || 0) * 100}%` }} />
+
+                  <div className="difficulty-meter">
+                    <div style={{ fontSize: '0.6rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Disposal within 12m</div>
+                    <div className={`difficulty-score difficulty-score--${prediction.disposal_likelihood.includes('Likely') ? 'low' : 'critical'}`}>
+                      {prediction.disposal_likelihood.includes('Likely') ? 'LIKELY' : 'UNLIKELY'}
+                    </div>
+                    <div className="progress-track mt-1 mb-1">
+                      <div className={`progress-fill progress-fill--${prediction.disposal_likelihood.includes('Likely') ? 'success' : 'danger'}`} 
+                           style={{ width: `${prediction.disposal_confidence}%` }} />
+                    </div>
+                    <div className="difficulty-tier-label">Confidence: {prediction.disposal_confidence}%</div>
                   </div>
-                  <div className="difficulty-tier-label">Tier: {difficulty.difficulty_tier} complexity</div>
                 </div>
                 
                 <div className="mb-2">
-                  <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Contributing Backlog Factors:</span>
+                  <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Key Risk Factors:</span>
                   <ul style={{ fontSize: '0.8rem', color: 'var(--text-muted)', paddingLeft: '1.25rem', marginTop: '0.5rem', lineHeight: 1.6 }}>
-                    {difficulty.contributing_factors.map((f, i) => <li key={i}>{f}</li>)}
+                    {prediction.risk_factors?.map((f, i) => <li key={i}>{f}</li>)}
                   </ul>
                 </div>
                 
                 <div className="disclaimer-box">
                   <div className="disclaimer-header">
                     <ShieldAlertIcon />
-                    <span>Judiciary Disclaimer</span>
+                    <span>Machine Learning Disclaimer</span>
                   </div>
-                  <div className="disclaimer-text">{difficulty.disclaimer}</div>
+                  <div className="disclaimer-text">These predictions are generated by a RandomForest classifier trained on historical judicial data. They assess procedural timelines and do NOT predict case outcomes, merits, or guilt.</div>
                 </div>
               </div>
             )}

@@ -4,8 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import type { CaseListItem, SystemOverview } from '../types';
 import StatCard from '../components/StatCard';
+import StateMap from '../components/StateMap';
 import DistrictGrid from '../components/DistrictGrid';
-import DistrictModal from '../components/DistrictModal';
+import DistrictDetailModal from '../components/DistrictDetailModal';
 import DifficultyBadge from '../components/DifficultyBadge';
 import type { DistrictSummary } from '../types';
 
@@ -31,6 +32,7 @@ const Dashboard: React.FC = () => {
   const [myCases, setMyCases] = useState<CaseListItem[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'map' | 'grid'>('map');
 
   const isJudge = user?.role === 'judge';
 
@@ -45,7 +47,7 @@ const Dashboard: React.FC = () => {
             api.get('/cases/', { params: { case_status: 'Pending', ordering: '-difficulty_score', page_size: 5 } })
           ]);
           setOverview(overviewRes.data);
-          setDistricts(districtRes.data);
+          setDistricts(districtRes.data.results || districtRes.data);
           setEscalationCases(casesRes.data.results || casesRes.data);
         } else {
           // Lawyer: fetch their own cases
@@ -55,7 +57,7 @@ const Dashboard: React.FC = () => {
           ]);
           const cases = casesRes.data.results || casesRes.data;
           setMyCases(cases);
-          setDistricts(districtRes.data);
+          setDistricts(districtRes.data.results || districtRes.data);
         }
       } catch (err) {
         console.error('Dashboard fetch error:', err);
@@ -145,23 +147,70 @@ const Dashboard: React.FC = () => {
               />
             </div>
 
-            {/* District Grid */}
+            {/* Combined Interactive Map & Heatmap Grid */}
             <div className="jw-card" style={{ marginBottom: '2rem' }}>
               <div className="jw-card-header">
                 <div>
                   <h2 className="jw-card-title">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" />
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                     </svg>
-                    Gujarat Districts — Severity Heatmap
+                    Interactive Map & Heatmap Grid
                   </h2>
-                  <p className="jw-card-subtitle">Click any district tile for case breakdown</p>
+                  <p className="jw-card-subtitle">Geographic Command Center and active caseload density</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#0F1217', padding: '0.25rem', borderRadius: '6px', border: '1px solid #2A313C' }}>
+                  <button 
+                    onClick={() => setActiveTab('map')} 
+                    style={{ 
+                      padding: '0.375rem 0.75rem', 
+                      fontSize: '0.75rem', 
+                      borderRadius: '4px', 
+                      border: 'none', 
+                      cursor: 'pointer',
+                      backgroundColor: activeTab === 'map' ? '#2A313C' : 'transparent',
+                      color: activeTab === 'map' ? '#F0EEE6' : '#a1a1aa'
+                    }}
+                  >
+                    Interactive Map
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('grid')} 
+                    style={{ 
+                      padding: '0.375rem 0.75rem', 
+                      fontSize: '0.75rem', 
+                      borderRadius: '4px', 
+                      border: 'none', 
+                      cursor: 'pointer',
+                      backgroundColor: activeTab === 'grid' ? '#2A313C' : 'transparent',
+                      color: activeTab === 'grid' ? '#F0EEE6' : '#a1a1aa'
+                    }}
+                  >
+                    Heatmap Grid
+                  </button>
                 </div>
               </div>
-              <DistrictGrid
-                interactive={true}
-                onDistrictClick={(d) => setSelectedDistrict(d)}
-              />
+              
+              {activeTab === 'grid' && (
+                <div style={{ padding: '0 1.25rem 1.25rem', animation: 'fadeIn 0.3s ease' }}>
+                  <DistrictGrid 
+                    districts={[...districts].sort((a, b) => b.pending_count - a.pending_count)}
+                    onDistrictClick={(dist) => setSelectedDistrict(dist)}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'map' && (
+                <div style={{ animation: 'fadeIn 0.3s ease' }}>
+                  <StateMap 
+                    districts={districts}
+                    onDistrictClick={(distName) => {
+                      const matched = districts.find(d => d.district_name.toLowerCase().includes(distName.toLowerCase()) || distName.toLowerCase().includes(d.district_name.toLowerCase()));
+                      if (matched) setSelectedDistrict(matched);
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Critical Escalation Watch */}
@@ -242,10 +291,10 @@ const Dashboard: React.FC = () => {
                     </svg>
                     Gujarat Courts Reference Matrix (Read-Only)
                   </h2>
-                  <p className="jw-card-subtitle">Caseload density of the court districts. Contact the registrar for transfers.</p>
+                  <p className="jw-card-subtitle">Geographical representation of state jurisdictions.</p>
                 </div>
               </div>
-              <DistrictGrid interactive={false} />
+              <StateMap stateCode="GJ" districts={districts} />
             </div>
 
             {/* My Cases Table */}
@@ -306,12 +355,12 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
-      {/* District Modal */}
+      {/* District Detail Modal Overlay */}
       {selectedDistrict && (
-        <DistrictModal
+        <DistrictDetailModal
           district={selectedDistrict}
           onClose={() => setSelectedDistrict(null)}
-          onAuditCases={(districtName) => {
+          onViewAllCases={(districtName) => {
             setSelectedDistrict(null);
             navigate(`/search?district=${encodeURIComponent(districtName)}`);
           }}

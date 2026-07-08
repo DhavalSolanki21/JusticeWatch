@@ -10,7 +10,9 @@ class User(AbstractUser):
     
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='lawyer')
     full_name = models.CharField(max_length=255)
-    district_scope = models.CharField(max_length=100, blank=True, null=True)
+    display_name = models.CharField(max_length=255, blank=True)
+    photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+    district_scope = models.ForeignKey('districts.District', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_users')
     bar_council_id = models.CharField(max_length=50, blank=True, null=True)
     designation = models.CharField(max_length=100, blank=True, null=True)
     is_verified = models.BooleanField(default=False)

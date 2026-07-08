@@ -1,15 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
-
-export interface UserProfile {
-  id: number;
-  username: string;
-  email: string;
-  role: 'judge' | 'lawyer' | 'admin';
-  full_name: string;
-  district_scope?: string;
-  is_verified: boolean;
-}
+import type { UserProfile } from '../types';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -19,6 +10,7 @@ interface AuthContextType {
   logout: () => void;
   register: (formData: any) => Promise<boolean>;
   clearError: () => void;
+  fetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,18 +20,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchUser = async () => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      try {
+        const response = await api.get('/auth/me/');
+        setUser(response.data);
+      } catch (err: any) {
+        console.error("Token restore failed:", err);
+        logout();
+      }
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        try {
-          const response = await api.get('/auth/me/');
-          setUser(response.data);
-        } catch (err: any) {
-          console.error("Token restore failed:", err);
-          logout();
-        }
-      }
+      await fetchUser();
       setLoading(false);
     };
     initAuth();
@@ -92,12 +88,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearError = () => setError(null);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout, register, clearError }}>
+    <AuthContext.Provider value={{ user, loading, error, login, logout, register, clearError, fetchUser }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

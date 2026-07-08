@@ -51,6 +51,7 @@ const Register: React.FC = () => {
     setSubmitting(false);
 
     if (success) {
+      alert("Your registration has been submitted. Please wait 24–48 hours for a judge to approve your account.");
       navigate('/pending-verification', { state: { fullName } });
     }
   };

@@ -1,0 +1,155 @@
+.district-grid-container {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .district-grid-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .district-grid-container {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .district-grid-container {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.district-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 6rem;
+  padding: 0.875rem;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  text-align: left;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  background-color: transparent;
+}
+
+.district-tile:hover {
+  transform: translateY(-2px) scale(1.01);
+}
+
+.district-tile:active {
+  transform: scale(0.99);
+}
+
+.district-tile-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 0.75rem;
+  font-family: var(--font-sans, sans-serif);
+}
+
+.district-tile-meta {
+  margin-top: 0.5rem;
+}
+
+.district-tile-label {
+  font-size: 0.625rem;
+  font-family: var(--font-mono, monospace);
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+}
+
+.district-tile-value {
+  font-size: 0.875rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+/* Severity Theme: Critical (Rose) */
+.district-tile.severity-critical {
+  background-color: rgba(76, 5, 25, 0.7); /* rose-950/70 */
+  border-color: rgba(225, 29, 72, 0.8); /* rose-600/80 */
+  color: #fecdd3; /* rose-200 */
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+}
+.district-tile.severity-critical:hover {
+  background-color: rgba(136, 19, 55, 0.8); /* rose-900/80 */
+}
+
+/* Severity Theme: High (Orange) */
+.district-tile.severity-high {
+  background-color: rgba(67, 20, 7, 0.7); /* orange-950/70 */
+  border-color: rgba(234, 88, 12, 0.8); /* orange-600/80 */
+  color: #fed7aa; /* orange-200 */
+}
+.district-tile.severity-high:hover {
+  background-color: rgba(124, 45, 18, 0.8); /* orange-900/80 */
+}
+
+/* Severity Theme: Moderate/Medium (Amber) */
+.district-tile.severity-medium, .district-tile.severity-moderate {
+  background-color: rgba(69, 26, 3, 0.7); /* amber-950/70 */
+  border-color: rgba(217, 119, 6, 0.8); /* amber-600/80 */
+  color: #fde68a; /* amber-200 */
+}
+.district-tile.severity-medium:hover, .district-tile.severity-moderate:hover {
+  background-color: rgba(120, 53, 15, 0.8); /* amber-900/80 */
+}
+
+/* Severity Theme: Low (Emerald) */
+.district-tile.severity-low {
+  background-color: rgba(2, 44, 34, 0.7); /* emerald-950/70 */
+  border-color: rgba(5, 150, 105, 0.8); /* emerald-600/80 */
+  color: #a7f3d0; /* emerald-200 */
+}
+.district-tile.severity-low:hover {
+  background-color: rgba(6, 78, 59, 0.8); /* emerald-900/80 */
+}
+
+/* Severity Theme: Default */
+.district-tile.severity-default {
+  background-color: #1E2530;
+  border-color: #2A313C;
+  color: #d4d4d8; /* zinc-300 */
+}
+
+/* Animated Glowing Beacon */
+.district-beacon-wrapper {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.district-beacon-ping {
+  position: absolute;
+  display: inline-flex;
+  height: 100%;
+  width: 100%;
+  border-radius: 50%;
+  background-color: #fb7185; /* rose-400 */
+  opacity: 0.75;
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.district-beacon-dot {
+  position: relative;
+  display: inline-flex;
+  border-radius: 50%;
+  height: 0.5rem;
+  width: 0.5rem;
+  background-color: #f43f5e; /* rose-500 */
+}

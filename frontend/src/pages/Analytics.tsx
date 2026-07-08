@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import type { SystemOverview, DistrictSummary } from '../types';
 import StatCard from '../components/StatCard';
-import { BarChart, DonutBars } from '../components/SvgCharts';
+import { DonutBars } from '../components/SvgCharts';
+import { PendencyTimelineChart } from '../components/PendencyTimelineChart';
+import Plot from 'react-plotly.js';
 
 const ChartIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -40,11 +42,11 @@ const Analytics: React.FC = () => {
     const fetchData = async () => {
       try {
         const [ovRes, distRes] = await Promise.all([
-          api.get('/analytics/overview/'),
+          api.get(`/analytics/overview/?district=${districtFilter}`),
           api.get('/districts/summary/')
         ]);
         setOverview(ovRes.data);
-        setDistricts(distRes.data);
+        setDistricts(distRes.data.results || distRes.data);
       } catch (err) {
         console.error('Failed to load analytics:', err);
       } finally {
@@ -52,7 +54,7 @@ const Analytics: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [districtFilter]);
 
   if (loading) return <div className="main-content"><div className="spinner" style={{ margin: 'auto' }} /></div>;
   if (!overview) return <div className="main-content"><div className="empty-state"><p>No analytics available.</p></div></div>;
@@ -75,10 +77,9 @@ const Analytics: React.FC = () => {
     }
   }
 
-  // Parse Top Congested Districts into BarChart array
-  const topDistrictsArray = Object.entries(overview.top_congested_districts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => ({ label, value, color: 'var(--severity-high)' }));
+  // Parse Top Congested Districts into Plotly format
+  const topDistrictsLabels = Object.keys(overview.top_congested_districts);
+  const topDistrictsValues = Object.values(overview.top_congested_districts);
 
   // Parse Difficulty into Donut array
   const diffDonutArray = Object.entries(overview.difficulty_breakdown).map(([label, value]) => ({
@@ -89,14 +90,34 @@ const Analytics: React.FC = () => {
            label === 'medium' ? 'var(--severity-medium)' : 'var(--severity-low)'
   }));
 
-  // Backlog age simulation for visual panel (as the real backend doesn't aggregate this explicitly yet, we simulate using the district average as an anchor)
-  const backlogArray = [
-    { label: '0-1 Year', value: Math.round(pending * 0.22), color: 'var(--severity-low)' },
-    { label: '1-3 Years', value: Math.round(pending * 0.35), color: 'var(--severity-medium)' },
-    { label: '3-5 Years', value: Math.round(pending * 0.25), color: 'var(--severity-high)' },
-    { label: '5-10 Years', value: Math.round(pending * 0.13), color: 'var(--severity-critical)' },
-    { label: '10+ Years', value: Math.round(pending * 0.05), color: '#7f1d1d' }
+  // Backlog age visualization from real data
+  let backlogArray = [
+    { label: '0-1 Year', value: 0, color: 'var(--severity-low)' },
+    { label: '1-3 Years', value: 0, color: 'var(--severity-medium)' },
+    { label: '3-5 Years', value: 0, color: 'var(--severity-high)' },
+    { label: '5-10 Years', value: 0, color: 'var(--severity-critical)' },
+    { label: '10+ Years', value: 0, color: '#7f1d1d' }
   ];
+
+  if (overview.backlog_age_brackets) {
+    backlogArray = [
+      { label: '0-1 Year', value: overview.backlog_age_brackets['0-1 Year'] || 0, color: 'var(--severity-low)' },
+      { label: '1-3 Years', value: overview.backlog_age_brackets['1-3 Years'] || 0, color: 'var(--severity-medium)' },
+      { label: '3-5 Years', value: overview.backlog_age_brackets['3-5 Years'] || 0, color: 'var(--severity-high)' },
+      { label: '5-10 Years', value: overview.backlog_age_brackets['5-10 Years'] || 0, color: 'var(--severity-critical)' },
+      { label: '10+ Years', value: overview.backlog_age_brackets['10+ Years'] || 0, color: '#7f1d1d' }
+    ];
+  }
+
+  // Judge distribution from real data
+  let judgeArray: { label: string, value: number, color: string }[] = [];
+  if (overview.judge_distribution) {
+    judgeArray = Object.entries(overview.judge_distribution).map(([label, value]) => ({
+      label,
+      value,
+      color: 'var(--accent)'
+    }));
+  }
 
   return (
     <div className="main-content">
@@ -132,6 +153,13 @@ const Analytics: React.FC = () => {
           <StatCard label="Avg Backlog Age" value={`${(avgAge / 365).toFixed(1)} Years`} />
         </div>
 
+        {/* Pendency Timeline Trend (Real Data) */}
+        {districtFilter === 'All' && overview.trend && (
+          <div style={{ marginBottom: '2rem' }}>
+            <PendencyTimelineChart trend={overview.trend} />
+          </div>
+        )}
+
         {/* 2x2 Grid */}
         <div className="grid-2">
           
@@ -141,7 +169,31 @@ const Analytics: React.FC = () => {
               <h3 className="jw-card-title"><ChartIcon /> Top Congested Districts (Pending Cases)</h3>
             </div>
             <div style={{ padding: '1rem 0' }}>
-              <BarChart items={topDistrictsArray} height={160} />
+              <Plot
+                data={[
+                  {
+                    x: topDistrictsLabels,
+                    y: topDistrictsValues,
+                    type: 'bar',
+                    marker: { color: '#eab308' },
+                    text: topDistrictsValues.map(String),
+                    textposition: 'auto',
+                  },
+                ]}
+                layout={{
+                  autosize: true,
+                  height: 250,
+                  margin: { l: 40, r: 20, t: 20, b: 60 },
+                  paper_bgcolor: 'transparent',
+                  plot_bgcolor: 'transparent',
+                  font: { color: '#9ca3af', family: 'Inter' },
+                  xaxis: { tickangle: -45 },
+                  yaxis: { gridcolor: '#374151', zerolinecolor: '#374151' }
+                }}
+                useResizeHandler={true}
+                config={{ responsive: true, displayModeBar: false }}
+                style={{ width: '100%', height: '100%' }}
+              />
             </div>
           </div>
 
@@ -171,19 +223,13 @@ const Analytics: React.FC = () => {
             </div>
           </div>
 
-          {/* Judge / Resource Allocation simulation */}
+          {/* Judge / Resource Allocation (Real Data) */}
           <div className="jw-card">
             <div className="jw-card-header">
-              <h3 className="jw-card-title"><UsersIcon /> Judge-wise Active Case Load Simulation</h3>
+              <h3 className="jw-card-title"><UsersIcon /> Judge-wise Active Case Load</h3>
             </div>
             <div style={{ padding: '0.5rem 0' }}>
-              {/* Simulated data based on scope pending */}
-              <DonutBars items={[
-                { label: "Hon'ble Mr. Justice R.V. Patel", value: Math.round(pending * 0.28), color: 'var(--accent)' },
-                { label: "Hon'ble Mrs. Justice G.S. Contractor", value: Math.round(pending * 0.23), color: 'var(--accent)' },
-                { label: "Hon'ble Mr. Justice K.M. Trivedi", value: Math.round(pending * 0.20), color: 'var(--accent)' },
-                { label: "Hon'ble Mrs. Justice S.T. Gokhale", value: Math.round(pending * 0.16), color: 'var(--accent)' },
-              ]} />
+              <DonutBars items={judgeArray} total={pending} />
             </div>
           </div>
 

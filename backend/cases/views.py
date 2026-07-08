@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Case
-from .serializers import CaseDetailSerializer, CaseListSerializer, LawyerCaseUpdateSerializer
+from .serializers import CaseDetailSerializer, CaseListSerializer, LawyerCaseUpdateSerializer, CaseCreateSerializer, CaseBriefSerializer
 from .filters import CaseFilter
 from accounts.permissions import IsJudgeOrReadOnlyForLawyer
 
@@ -18,7 +18,7 @@ class CaseViewSet(viewsets.ModelViewSet):
         
         if user.role == 'judge':
             if user.district_scope:
-                return Case.objects.filter(district__name=user.district_scope)
+                return Case.objects.filter(district=user.district_scope)
             return Case.objects.all()
             
         elif user.role == 'lawyer':
@@ -27,6 +27,8 @@ class CaseViewSet(viewsets.ModelViewSet):
         return Case.objects.none()
 
     def get_serializer_class(self):
+        if self.action == 'create':
+            return CaseCreateSerializer
         if self.action == 'list':
             return CaseListSerializer
         
@@ -35,37 +37,50 @@ class CaseViewSet(viewsets.ModelViewSet):
             
         return CaseDetailSerializer
         
+    def perform_create(self, serializer):
+        case = serializer.save()
+        if self.request.user.role == 'lawyer':
+            from .models import CaseAssignment
+            CaseAssignment.objects.create(case=case, lawyer=self.request.user, representing='Petitioner')
+        
     @action(detail=True, methods=['get'])
-    def difficulty_breakdown(self, request, pk=None):
+    def predict(self, request, pk=None):
         case = self.get_object()
         
-        from .ml_service import get_difficulty_score
-        num_hearings = case.hearings.count()
-        score, factors = get_difficulty_score(
-            case.crime_type,
-            case.fir_date,
-            case.chargesheet_status,
-            num_hearings
-        )
+        from .ml_service import predict_for_case
+        predictions = predict_for_case(case)
         
-        if score is not None:
-            if case.difficulty_score != score:
-                case.difficulty_score = score
-                if score <= 0.25:
-                    case.difficulty_tier = 'low'
-                elif score <= 0.50:
-                    case.difficulty_tier = 'medium'
-                elif score <= 0.75:
-                    case.difficulty_tier = 'high'
-                else:
-                    case.difficulty_tier = 'critical'
-                case.save(update_fields=['difficulty_score', 'difficulty_tier'])
-        
-        data = {
-            "difficulty_score": case.difficulty_score,
-            "difficulty_tier": case.difficulty_tier,
-            "contributing_factors": factors,
-            "disclaimer": "This is a case-complexity estimate based on procedural and administrative factors. It does not predict, assess, or comment on the merits, guilt, or legal outcome of this case."
-        }
-        
-        return Response(data)
+        if 'error' not in predictions:
+            # We can optionally save the duration_risk as the case difficulty tier
+            # if we want to cache it, but let's just return it for now.
+            if case.difficulty_tier != predictions['duration_risk']:
+                case.difficulty_tier = predictions['duration_risk']
+                case.save(update_fields=['difficulty_tier'])
+                
+        return Response(predictions)
+
+from rest_framework import generics
+from accounts.permissions import IsVerifiedUser
+
+class AllCasesListView(generics.ListAPIView):
+    permission_classes = [IsVerifiedUser]
+    serializer_class = CaseBriefSerializer
+    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter]
+    filterset_class = CaseFilter
+    search_fields = ['case_number', 'fir_number', 'applicable_sections']
+    queryset = Case.objects.all().order_by('-filed_date')
+
+class MyCaseHistoryView(generics.ListAPIView):
+    permission_classes = [IsVerifiedUser]
+    serializer_class = CaseDetailSerializer
+    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter]
+    filterset_class = CaseFilter
+    search_fields = ['case_number', 'fir_number', 'applicable_sections']
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'judge':
+            return Case.objects.filter(judge=user).order_by('case_status', '-filed_date')
+        elif user.role == 'lawyer':
+            return Case.objects.filter(caseassignment__lawyer=user).order_by('case_status', '-filed_date')
+        return Case.objects.none()

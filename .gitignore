@@ -15,6 +15,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+# db.sqlite3 # Un-ignored so real demo data is pushed to GitHub
+db.sqlite3-journal
+backend/ml_pipeline/data/
+
 
 # --- Node / React Frontend ---
 frontend/node_modules/
@@ -51,4 +55,4 @@ ehthumbs.db
 Thumbs.db
 
 # --- Gemini AI ---
-GEMINI.md
+# GEMINI.md # Un-ignored so prompt constraints are included

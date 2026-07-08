@@ -27,7 +27,7 @@ class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
             return True
             
         if request.user.role == 'lawyer':
-            return request.method in permissions.SAFE_METHODS
+            return request.method in permissions.SAFE_METHODS or request.method == 'POST'
             
         return False
         
@@ -41,3 +41,11 @@ class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
             return obj.caseassignment_set.filter(lawyer=request.user).exists()
             
         return False
+
+class IsVerifiedUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(
+            request.user and 
+            request.user.is_authenticated and 
+            request.user.is_verified
+        )

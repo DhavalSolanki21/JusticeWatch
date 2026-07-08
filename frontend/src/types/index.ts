@@ -10,8 +10,19 @@ export interface UserProfile {
   email: string;
   role: 'judge' | 'lawyer' | 'admin';
   full_name: string;
-  district_scope?: string | null;
+  display_name?: string;
+  photo?: string | null;
+  district_scope?: number | null;
+  district_name?: string;
   is_verified: boolean;
+}
+
+export interface PendingLawyer {
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  bar_council_id: string | null;
 }
 
 export interface LoginResponse {
@@ -48,6 +59,16 @@ export interface AssignedLawyer {
   full_name: string;
   representing: 'Petitioner' | 'Respondent' | 'Defense' | 'Prosecution';
   assigned_date: string;
+}
+
+export interface CaseBrief {
+  id: number;
+  case_number: string;
+  district_name: string;
+  case_category: CaseCategory;
+  case_status: CaseStatus;
+  difficulty_tier: DifficultyTier | null;
+  filed_date: string;
 }
 
 export interface CaseListItem {
@@ -96,11 +117,13 @@ export interface CaseUpdatePayload {
 
 /* ======================== Difficulty ======================== */
 
-export interface DifficultyBreakdown {
-  difficulty_score: number | null;
-  difficulty_tier: DifficultyTier | null;
-  contributing_factors: string[];
-  disclaimer: string;
+export interface CasePrediction {
+  duration_risk: string;
+  duration_confidence: number;
+  disposal_likelihood: string;
+  disposal_confidence: number;
+  risk_factors: string[];
+  error?: string;
 }
 
 /* ======================== Districts ======================== */
@@ -116,6 +139,9 @@ export interface DistrictSummary {
   disposal_rate: number;
   avg_case_age_days: number;
   severity_tier: SeverityTier;
+  crime_distribution?: { crime: string; count: number }[];
+  chargesheet_distribution?: { status: string; count: number }[];
+  category_distribution?: { category: string; count: number }[];
 }
 
 export interface DistrictBreakdown {
@@ -133,6 +159,30 @@ export interface SystemOverview {
   status_breakdown: Record<string, number>;
   difficulty_breakdown: Record<string, number>;
   top_congested_districts: Record<string, number>;
+  backlog_age_brackets?: Record<string, number>;
+  judge_distribution?: Record<string, number>;
+  trend?: {
+    filed: Record<string, number>;
+    disposed: Record<string, number>;
+  };
+}
+
+export interface AtRiskCase {
+  case_number: string;
+  id: number;
+  duration_risk: string;
+  confidence: number;
+}
+
+export interface PredictionsOverview {
+  accuracy_metrics: {
+    duration_risk_accuracy: string;
+    disposal_likelihood_accuracy: string;
+  };
+  duration_distribution: Record<string, number>;
+  disposal_distribution: Record<string, number>;
+  at_risk_cases: AtRiskCase[];
+  data_source: string;
 }
 
 /* ======================== Timeline ======================== */

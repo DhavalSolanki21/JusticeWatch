@@ -12,7 +12,11 @@ import Dashboard from './pages/Dashboard';
 import CaseSearch from './pages/CaseSearch';
 import CaseDetail from './pages/CaseDetail';
 import Analytics from './pages/Analytics';
+import Predictions from './pages/Predictions';
 import Profile from './pages/Profile';
+import ApprovalPanel from './pages/ApprovalPanel';
+import FileCase from './pages/FileCase';
+import AllCases from './pages/AllCases';
 
 // Protected Route Wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: 'judge' | 'lawyer' }> = ({ children, requiredRole }) => {
@@ -58,7 +62,12 @@ const App: React.FC = () => {
           <Route path="/search" element={<ProtectedRoute><CaseSearch /></ProtectedRoute>} />
           <Route path="/cases/:id" element={<ProtectedRoute><CaseDetail /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute requiredRole="judge"><Analytics /></ProtectedRoute>} />
+          <Route path="/predictions" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          
+          <Route path="/approvals" element={<ProtectedRoute requiredRole="judge"><ApprovalPanel /></ProtectedRoute>} />
+          <Route path="/file-case" element={<ProtectedRoute requiredRole="lawyer"><FileCase /></ProtectedRoute>} />
+          <Route path="/all-cases" element={<ProtectedRoute><AllCases /></ProtectedRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
