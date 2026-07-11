@@ -148,6 +148,22 @@ To get a local copy up and running, follow these simple steps.
    python manage.py runserver
    ```
 
+### For Collaborators / Data Science
+If you are contributing to the machine learning pipelines, the raw dataset and historical CSVs are tracked via Git LFS in the `backend/ml_pipeline/data/` directory.
+
+- Ensure you have Git LFS installed (`git lfs install`).
+- After cloning, run `git lfs pull` to download the compressed datasets and the pre-trained `disposal_classifier_rf.pkl` artifact.
+- **Data Extraction:** Before running the ML pipeline, you MUST manually extract the `.tar.gz` datasets:
+  ```sh
+  cd backend/ml_pipeline/data
+  tar -xzf keys.tar.gz
+  tar -xzf cases_2011.tar.gz
+  tar -xzf cases_2014.tar.gz
+  tar -xzf cases_2017.tar.gz
+  ```
+- *Note: To conserve LFS bandwidth, only 3 representative years are tracked in this repository. The full 2010-2018 dataset is available externally if someone genuinely needs to retrain on the complete range.*
+- Please review the [CONTRIBUTING.md](CONTRIBUTING.md) for styling and data-privacy constraints before opening PRs.
+
 3. **Setup the Frontend**
    ```sh
    cd frontend

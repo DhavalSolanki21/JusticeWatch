@@ -40,7 +40,9 @@ def fetch_data(sample_size=None):
     
     gj_cases = []
     
-    for year in range(2010, 2019):
+    # We only use a subset of years for local LFS training
+    years_to_process = [2011, 2014, 2017]
+    for year in years_to_process:
         file_path = os.path.join(cases_path, f'cases_{year}.csv')
         if not os.path.exists(file_path):
             continue
