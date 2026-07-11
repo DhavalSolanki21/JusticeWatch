@@ -1,33 +1,42 @@
-# Python/Django
-__pycache__/
-*.py[cod]
-*$py.class
+# Git Hygiene - JusticeWatch
+
+# Django Database
+db.sqlite3
+*.sqlite3
+
+# Environments and Secrets
+.env
+.env.*
 .venv/
 venv/
 env/
-.env
+ENV/
 
-# Node/React
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node / React Frontend Dependencies & Builds
 node_modules/
 dist/
 build/
 .npm/
 package-lock.json
 
-# IDE/OS
+# Editors / IDEs / OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# Machine Learning Artifacts & Data
+# Machine Learning Data and Artifacts (Except Checked-in Models)
 backend/ml_pipeline/data/
-backend/ml_pipeline/artifacts/disposal_classifier_rf.pkl
 backend/ml_pipeline/artifacts/*.pkl
 backend/ml_pipeline/artifacts/*.keras
 backend/ml_pipeline/artifacts/*.h5
-*.sqlite3
 
+# Keep specific models tracked for inference
 !backend/ml_pipeline/artifacts/duration_regressor.pkl
 !backend/ml_pipeline/artifacts/disposal_classifier_rf.pkl
 !backend/ml_pipeline/artifacts/disposal_classifier_dt.pkl
@@ -35,4 +44,3 @@ backend/ml_pipeline/artifacts/*.h5
 !backend/ml_pipeline/artifacts/disposal_nn_model.keras
 !backend/ml_pipeline/artifacts/nn_scaler.pkl
 !backend/ml_pipeline/artifacts/encoders.pkl
-backend/ml_pipeline/artifacts/disposal_classifier_rf.pkl
