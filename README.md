@@ -142,26 +142,36 @@ To get a local copy up and running, follow these simple steps.
    ```sh
    python ml_pipeline/train_model.py
    ```
-
-   **Start the Development Server:**
-   ```sh
    python manage.py runserver
    ```
 
-### For Collaborators / Data Science
-If you are contributing to the machine learning pipelines, the raw dataset and historical CSVs are tracked via Git LFS in the `backend/ml_pipeline/data/` directory.
+If you are contributing to the machine learning pipelines and wish to retrain the models, you must download the raw historical datasets directly from the **Development Data Lab (DDL)**. To keep this repository lightweight, the raw data is not hosted here.
 
-- Ensure you have Git LFS installed (`git lfs install`).
-- After cloning, run `git lfs pull` to download the compressed datasets and the pre-trained `disposal_classifier_rf.pkl` artifact.
-- **Data Extraction:** Before running the ML pipeline, you MUST manually extract the `.tar.gz` datasets:
-  ```sh
-  cd backend/ml_pipeline/data
-  tar -xzf keys.tar.gz
-  tar -xzf cases_2011.tar.gz
-  tar -xzf cases_2014.tar.gz
-  tar -xzf cases_2017.tar.gz
-  ```
-- *Note: To conserve LFS bandwidth, only 3 representative years are tracked in this repository. The full 2010-2018 dataset is available externally if someone genuinely needs to retrain on the complete range.*
+### Dataset Setup Instructions
+
+1. Visit the [Development Data Lab Judicial Data Portal](https://www.devdatalab.org/judicial-data).
+2. Under **Target contents**, click the link next to **Data download** (which points to a public Dropbox).
+3. Download the following required components:
+   - `keys/` (folder containing relationship mapping CSVs)
+   - `cases/cases_2011.csv`
+   - `cases/cases_2014.csv`
+   - `cases/cases_2017.csv`
+4. Place the downloaded files into the repository matching this exact structure:
+   ```text
+   backend/ml_pipeline/data/
+   ├── keys/
+   │   └── *.csv
+   └── cases/
+       ├── cases_2011.csv
+       ├── cases_2014.csv
+       └── cases_2017.csv
+   ```
+5. Run the training script: `python backend/ml_pipeline/train_model.py`
+
+**Attribution:**
+This data uses the Open Database License. If you use it for external research, please cite:
+> Ash, Elliott and Asher, Sam and Bhowmick, Aditi and Bhupatiraju, Sandeep and Chen, Daniel and Devi, Tanaya and Goessmann, Christoph and Novosad, Paul and Siddiqi, Bilal (2025). *In-Group Bias in the Indian Judiciary: Evidence from 5 Million Criminal Cases*. The Review of Economics and Statistics.
+
 - Please review the [CONTRIBUTING.md](CONTRIBUTING.md) for styling and data-privacy constraints before opening PRs.
 
 3. **Setup the Frontend**
