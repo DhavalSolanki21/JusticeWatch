@@ -35,3 +35,4 @@ backend/ml_pipeline/artifacts/*.h5
 !backend/ml_pipeline/artifacts/disposal_nn_model.keras
 !backend/ml_pipeline/artifacts/nn_scaler.pkl
 !backend/ml_pipeline/artifacts/encoders.pkl
+backend/ml_pipeline/artifacts/disposal_classifier_rf.pkl
