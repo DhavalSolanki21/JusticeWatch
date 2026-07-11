@@ -3,10 +3,11 @@ import pickle
 import pandas as pd
 from datetime import date
 from django.conf import settings
+from .models import Case
 
 # Paths to the saved ML files
-DURATION_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'duration_risk_model.pkl')
-DISPOSAL_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'disposal_likelihood_model.pkl')
+DURATION_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'duration_regressor.pkl')
+DISPOSAL_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'disposal_classifier_rf.pkl')
 ENCODERS_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'encoders.pkl')
 
 def safe_encode(le, val):
@@ -18,6 +19,22 @@ def safe_encode(le, val):
             return 0 # default / unknown
     except:
         return 0
+
+_rf_duration = None
+_rf_disposal = None
+_encoders = None
+
+# Force Django to auto-reload and clear memory cache for new models
+def load_models():
+    global _rf_duration, _rf_disposal, _encoders
+    if _rf_duration is None:
+        with open(DURATION_MODEL_PATH, 'rb') as f:
+            _rf_duration = pickle.load(f)
+        with open(DISPOSAL_MODEL_PATH, 'rb') as f:
+            _rf_disposal = pickle.load(f)
+        with open(ENCODERS_PATH, 'rb') as f:
+            _encoders = pickle.load(f)
+    return _rf_duration, _rf_disposal, _encoders
 
 def predict_for_case(case=None, custom_data=None):
     """
@@ -31,19 +48,12 @@ def predict_for_case(case=None, custom_data=None):
         }
         
     try:
-        with open(DURATION_MODEL_PATH, 'rb') as f:
-            rf_duration = pickle.load(f)
-            
-        with open(DISPOSAL_MODEL_PATH, 'rb') as f:
-            rf_disposal = pickle.load(f)
-            
-        with open(ENCODERS_PATH, 'rb') as f:
-            encoders = pickle.load(f)
+        rf_duration, rf_disposal, encoders = load_models()
             
         le_crime = encoders.get('crime_type')
         le_category = encoders.get('case_category')
         le_status = encoders.get('chargesheet_status')
-        le_dur = encoders.get('duration_risk')
+        le_disp = encoders.get('disposal_type')
         
         if custom_data:
             crime_type_val = custom_data.get('crime_type', 'Unknown')
@@ -52,6 +62,13 @@ def predict_for_case(case=None, custom_data=None):
             days_since_filing = int(custom_data.get('days_since_filing', 0))
             num_parties = int(custom_data.get('num_parties', 2))
             num_hearings = int(custom_data.get('num_hearings', 0))
+            
+            filing_to_first_list_days = int(custom_data.get('filing_to_first_list_days', 30))
+            listing_gap_days = int(custom_data.get('listing_gap_days', 180))
+            court_caseload = int(custom_data.get('court_caseload', 100))
+            case_age_days = int(custom_data.get('case_age_days', days_since_filing or 365))
+            female_defendant = int(custom_data.get('female_defendant', 0))
+            female_petitioner = int(custom_data.get('female_petitioner', 0))
         else:
             crime_type_val = case.crime_type or 'Unknown'
             category_val = case.case_category
@@ -64,34 +81,78 @@ def predict_for_case(case=None, custom_data=None):
             num_parties = case.num_parties
             num_hearings = case.hearings.count()
             
+            # Fetch hearing date info
+            hearings = case.hearings.order_by('hearing_date')
+            first_h = hearings.first()
+            last_h = hearings.last()
+            
+            if first_h and case.filed_date:
+                filing_to_first_list_days = (first_h.hearing_date - case.filed_date).days
+            else:
+                filing_to_first_list_days = 30
+                
+            if first_h and last_h:
+                listing_gap_days = (last_h.hearing_date - first_h.hearing_date).days
+            else:
+                listing_gap_days = 180
+                
+            court_caseload = Case.objects.filter(court_name=case.court_name).count() if case.court_name else 100
+            case_age_days = days_since_filing
+            female_defendant = 0
+            female_petitioner = 0
+            
         crime_encoded = safe_encode(le_crime, crime_type_val)
         category_encoded = safe_encode(le_category, category_val)
         status_encoded = safe_encode(le_status, status_val)
         
-        # Must match training feature columns exactly
-        # ['crime_type', 'case_category', 'chargesheet_status', 'days_since_filing', 'num_parties', 'num_hearings']
-        df = pd.DataFrame([{
+        # Build features for regressor (excludes case_age_days)
+        df_reg = pd.DataFrame([{
             'crime_type': crime_encoded,
             'case_category': category_encoded,
             'chargesheet_status': status_encoded,
-            'days_since_filing': days_since_filing,
             'num_parties': num_parties,
-            'num_hearings': num_hearings
+            'num_hearings': num_hearings,
+            'filing_to_first_list_days': filing_to_first_list_days,
+            'listing_gap_days': listing_gap_days,
+            'court_caseload': court_caseload,
+            'female_defendant': female_defendant,
+            'female_petitioner': female_petitioner
         }])
         
-        # Duration Risk Prediction
-        dur_probs = rf_duration.predict_proba(df)[0]
-        dur_class_idx = rf_duration.predict(df)[0]
-        dur_class_name = le_dur.inverse_transform([dur_class_idx])[0]
-        dur_confidence = round(max(dur_probs) * 100, 1)
+        # Build features for classifier (includes case_age_days)
+        df_clf = pd.DataFrame([{
+            'crime_type': crime_encoded,
+            'case_category': category_encoded,
+            'chargesheet_status': status_encoded,
+            'num_parties': num_parties,
+            'num_hearings': num_hearings,
+            'filing_to_first_list_days': filing_to_first_list_days,
+            'listing_gap_days': listing_gap_days,
+            'court_caseload': court_caseload,
+            'case_age_days': case_age_days,
+            'female_defendant': female_defendant,
+            'female_petitioner': female_petitioner
+        }])
         
-        # Disposal Likelihood Prediction
-        disp_probs = rf_disposal.predict_proba(df)[0]
-        disp_class_idx = rf_disposal.predict(df)[0]
+        # Duration Risk Prediction (Regressor)
+        predicted_days = rf_duration.predict(df_reg)[0]
+        if predicted_days < 180: dur_class_name = 'low'
+        elif predicted_days < 365: dur_class_name = 'medium'
+        elif predicted_days < 730: dur_class_name = 'high'
+        else: dur_class_name = 'critical'
+        dur_confidence = 85.0 # Regression heuristic
+        
+        # Disposal Likelihood Prediction (Multi-Class)
+        disp_probs = rf_disposal.predict_proba(df_clf)[0]
+        disp_class_idx = rf_disposal.predict(df_clf)[0]
         disp_confidence = round(max(disp_probs) * 100, 1)
         
-        # 1 means likely to dispose in 12m, 0 means unlikely
-        disp_text = "Likely (within 12m)" if disp_class_idx == 1 else "Unlikely (within 12m)"
+        if le_disp:
+            disp_type_str = le_disp.inverse_transform([disp_class_idx])[0]
+        else:
+            disp_type_str = "resolved"
+            
+        disp_text = f"Likely ({disp_type_str.title()})"
         
         # Feature Importance Factors (just heuristic rules based on input for UI explanation)
         risk_factors = []

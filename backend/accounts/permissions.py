@@ -27,7 +27,7 @@ class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
             return True
             
         if request.user.role == 'lawyer':
-            return request.method in permissions.SAFE_METHODS or request.method == 'POST'
+            return request.method in permissions.SAFE_METHODS or request.method in ['POST', 'PUT', 'PATCH']
             
         return False
         
@@ -35,9 +35,8 @@ class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
         if request.user.role == 'judge':
             return True
             
-        if request.user.role == 'lawyer' and request.method in permissions.SAFE_METHODS:
+        if request.user.role == 'lawyer':
             # Check if this lawyer is assigned to this specific case.
-            # We assume obj is a Case instance.
             return obj.caseassignment_set.filter(lawyer=request.user).exists()
             
         return False

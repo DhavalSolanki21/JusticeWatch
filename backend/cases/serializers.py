@@ -38,10 +38,25 @@ class CaseCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Case
         fields = (
-            'district', 'court_name', 'case_category', 'crime_type', 
-            'applicable_sections', 'fir_number', 'fir_date', 
-            'num_parties', 'case_notes'
+            'id', 'case_number', 'district', 'court_name', 'case_category', 'crime_type', 
+            'applicable_sections', 'fir_number', 'fir_date', 'arrest_date',
+            'chargesheet_status', 'case_status', 'num_parties', 'case_notes'
         )
+        read_only_fields = ('id', 'case_number')
+        extra_kwargs = {
+            'district': {'required': True},
+            'court_name': {'required': True, 'allow_blank': False},
+            'case_category': {'required': True},
+            'crime_type': {'required': True, 'allow_blank': False},
+            'applicable_sections': {'required': True, 'allow_blank': False},
+            'fir_number': {'required': True, 'allow_blank': False},
+            'fir_date': {'required': True, 'allow_null': False},
+            'arrest_date': {'required': True, 'allow_null': False},
+            'chargesheet_status': {'required': True},
+            'case_status': {'required': True},
+            'num_parties': {'required': True, 'min_value': 1},
+            'case_notes': {'required': True, 'allow_blank': False},
+        }
 
     def create(self, validated_data):
         import uuid

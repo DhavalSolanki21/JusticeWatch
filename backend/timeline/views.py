@@ -14,7 +14,7 @@ class HearingViewSet(viewsets.ModelViewSet):
             
         if user.role == 'judge':
             if user.district_scope:
-                qs = Hearing.objects.filter(case__district__name=user.district_scope)
+                qs = Hearing.objects.filter(case__district=user.district_scope)
             else:
                 qs = Hearing.objects.all()
             
@@ -54,7 +54,7 @@ class HearingViewSet(viewsets.ModelViewSet):
                 from cases.models import Case
                 try:
                     case = Case.objects.get(pk=case_id)
-                    if case.district.name != user.district_scope:
+                    if case.district != user.district_scope:
                         return Response(
                             {"detail": "You do not have permission to log a hearing for this case outside your district scope."},
                             status=status.HTTP_403_FORBIDDEN

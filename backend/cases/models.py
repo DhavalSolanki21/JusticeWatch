@@ -30,7 +30,7 @@ class Case(models.Model):
 
     case_number = models.CharField(max_length=100, unique=True)
     district = models.ForeignKey('districts.District', on_delete=models.PROTECT, related_name='cases')
-    court_name = models.CharField(max_length=255)
+    court_name = models.CharField(max_length=255, db_index=True)
     judge = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.PROTECT, 
@@ -39,15 +39,15 @@ class Case(models.Model):
         limit_choices_to={'role': 'judge'},
         related_name='judged_cases'
     )
-    case_category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    case_category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, db_index=True)
     crime_type = models.CharField(max_length=100, null=True, blank=True)
     applicable_sections = models.CharField(max_length=255)
     fir_number = models.CharField(max_length=100, null=True, blank=True)
     fir_date = models.DateField(null=True, blank=True)
     arrest_date = models.DateField(null=True, blank=True)
-    chargesheet_status = models.CharField(max_length=50, choices=CHARGESHEET_CHOICES, default='Not Filed')
-    case_status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
-    filed_date = models.DateField()
+    chargesheet_status = models.CharField(max_length=50, choices=CHARGESHEET_CHOICES, default='Not Filed', db_index=True)
+    case_status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending', db_index=True)
+    filed_date = models.DateField(db_index=True)
     disposed_date = models.DateField(null=True, blank=True)
     num_parties = models.IntegerField(default=2)
     case_notes = models.TextField(null=True, blank=True)

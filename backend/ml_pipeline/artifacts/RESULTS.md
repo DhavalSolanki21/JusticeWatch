@@ -1,0 +1,25 @@
+# ML Model Performance Audit
+
+## 1. Duration Regression Model
+| Algorithm | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | R-Squared (R2) |
+|-----------|---------------------------|--------------------------|----------------|
+| Linear Regression | 52.87 Days | 45192.89 | 0.9003 |
+| Polynomial Regression (d=2) | 51.37 Days | 42107.77 | 0.9071 |
+
+*Deployed Best Model: Polynomial Regression*
+
+## 2. Multi-class Disposal Classifier Comparison
+| Model Algorithm | Accuracy | Macro Sensitivity (Recall) | Macro Specificity (TNR) |
+|---|---|---|---|
+| Random Forest | 0.4975 | 0.2376 | 0.9815 |
+| Decision Tree | 0.4655 | 0.2604 | 0.9806 |
+| K-Nearest Neighbors | 0.4128 | 0.2268 | 0.9787 |
+| Feedforward Neural Network | 0.3703 | 0.1422 | 0.9768 |
+
+## 3. Fairness and Bias Audit (Gender)
+| Subgroup | Average Prediction Error (MAE) | Sample Size |
+|----------|--------------------------------|-------------|
+| Male Defendants | 52.39 Days | 8831 |
+| Female Defendants | 43.64 Days | 1169 |
+
+**Bias Status:** **PASS** (Balanced)

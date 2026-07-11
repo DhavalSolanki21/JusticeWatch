@@ -153,3 +153,6 @@
   width: 0.5rem;
   background-color: #f43f5e; /* rose-500 */
 }
+
+.district-tile:hover { transform: translateY(-2px) scale(1.01); transition: transform 0.2s ease; }
+.district-tile:active { transform: scale(0.99); }
