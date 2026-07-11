@@ -21,8 +21,8 @@ package-lock.json
 Thumbs.db
 
 # Machine Learning Artifacts & Data
-backend/ml_pipeline/data/**/*.csv
-*.csv
+backend/ml_pipeline/data/
+backend/ml_pipeline/artifacts/disposal_classifier_rf.pkl
 backend/ml_pipeline/artifacts/*.pkl
 backend/ml_pipeline/artifacts/*.keras
 backend/ml_pipeline/artifacts/*.h5
