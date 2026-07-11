@@ -70,8 +70,8 @@ def fetch_data(sample_size=None):
     df['female_petitioner'] = df['female_petitioner'].apply(clean_gender)
     
     # Fill NaN for gender columns
-    df['female_defendant'] = df['female_defendant'].fillna(0).astype(int)
-    df['female_petitioner'] = df['female_petitioner'].fillna(0).astype(int)
+    df['female_defendant'] = df['female_defendant'].fillna(-1).astype(int)
+    df['female_petitioner'] = df['female_petitioner'].fillna(-1).astype(int)
 
     # 3. Parse date columns
     df['date_of_filing'] = pd.to_datetime(df['date_of_filing'], errors='coerce')
@@ -130,7 +130,17 @@ def fetch_data(sample_size=None):
     df['num_parties'] = 2
     df['num_hearings'] = np.random.randint(1, 15, size=len(df))
     
-    df['disposal_type'] = df['disp_name_s'].fillna('pending').astype(str)
+    def bin_disposal(disp_s):
+        disp_s = str(disp_s).lower()
+        if disp_s in ['convicted', 'plead guilty']: return 'Convicted / Guilty'
+        if disp_s in ['acquitted', 'quash']: return 'Acquitted / Quashed'
+        if disp_s in ['dismissed', 'reject']: return 'Dismissed / Rejected'
+        if disp_s in ['compromise', 'referred to lok adalat', 'withdrawn']: return 'Settled / Compromised'
+        if disp_s in ['transferred', 'remanded', 'committed']: return 'Transferred / Remanded'
+        if disp_s in ['allowed', 'judgement', 'ex-parte']: return 'Judgement (Merits)'
+        if disp_s == 'abated': return 'Abated'
+        return 'Other / Unclear'
+    df['disposal_type'] = df['disp_name_s'].apply(bin_disposal)
     
     return df
 
@@ -217,7 +227,7 @@ def train_models(df=None):
     feature_cols = [
         'crime_type', 'case_category', 'chargesheet_status', 
         'num_parties', 'num_hearings', 
-        'filing_to_first_list_days', 'listing_gap_days', 
+        'filing_to_first_list_days',
         'court_caseload', 'case_age_days', 
         'female_defendant', 'female_petitioner'
     ]
@@ -357,6 +367,10 @@ def train_models(df=None):
         pickle.dump(best_regressor, f)
     with open(os.path.join(artifacts_dir, 'disposal_classifier_rf.pkl'), 'wb') as f:
         pickle.dump(rf_clf, f)
+    with open(os.path.join(artifacts_dir, 'disposal_classifier_dt.pkl'), 'wb') as f:
+        pickle.dump(dt_clf, f)
+    with open(os.path.join(artifacts_dir, 'disposal_classifier_knn.pkl'), 'wb') as f:
+        pickle.dump(knn_clf, f)
     with open(os.path.join(artifacts_dir, 'encoders.pkl'), 'wb') as f:
         pickle.dump(encoders, f)
         
@@ -368,6 +382,7 @@ def train_models(df=None):
     results = f"""# ML Model Performance Audit
 
 ## 1. Duration Regression Model
+*(Corrected after data leakage/binning audit)*
 | Algorithm | Mean Absolute Error (MAE) | Mean Squared Error (MSE) | R-Squared (R2) |
 |-----------|---------------------------|--------------------------|----------------|
 | Linear Regression | {mae_lr:.2f} Days | {mse_lr:.2f} | {r2_lr:.4f} |
@@ -376,6 +391,7 @@ def train_models(df=None):
 *Deployed Best Model: {'Polynomial Regression' if mae_poly < mae_lr else 'Linear Regression'}*
 
 ## 2. Multi-class Disposal Classifier Comparison
+*(Corrected after data leakage/binning audit)*
 | Model Algorithm | Accuracy | Macro Sensitivity (Recall) | Macro Specificity (TNR) |
 |---|---|---|---|
 | Random Forest | {acc_rf:.4f} | {rf_sens:.4f} | {rf_spec:.4f} |
@@ -384,6 +400,7 @@ def train_models(df=None):
 | Feedforward Neural Network | {acc_nn:.4f} | {nn_sens:.4f} | {nn_spec:.4f} |
 
 ## 3. Fairness and Bias Audit (Gender)
+*(Corrected after data leakage/binning audit)*
 | Subgroup | Average Prediction Error (MAE) | Sample Size |
 |----------|--------------------------------|-------------|
 | Male Defendants | {mae_male_def:.2f} Days | {len(male_subset)} |

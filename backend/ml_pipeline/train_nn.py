@@ -1,4 +1,5 @@
 import os
+import pickle
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -18,21 +19,21 @@ def train_neural_network():
     # Filter to only disposed cases (same as classification task)
     disp_df = df[df['disposal_type'] != 'pending'].copy()
     
-    le_disp = LabelEncoder()
-    disp_df['disposal_type_enc'] = le_disp.fit_transform(disp_df['disposal_type'])
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'artifacts', 'encoders.pkl'), 'rb') as f:
+        encoders = pickle.load(f)
+        
+    le_disp = encoders['disposal_type']
+    disp_df['disposal_type_enc'] = le_disp.transform(disp_df['disposal_type'])
     
-    # We must match feature_cols from train_model.py
-    # Since NN requires scaling for numerical and one-hot for categorical ideally, 
-    # but for simplicity/direct comparison we will standardize the label encoded values too.
     categorical_cols = ['crime_type', 'case_category', 'chargesheet_status']
     for col in categorical_cols:
-        le = LabelEncoder()
-        disp_df[col] = le.fit_transform(disp_df[col].astype(str))
+        le = encoders[col]
+        disp_df[col] = le.transform(disp_df[col].astype(str))
         
     feature_cols = [
         'crime_type', 'case_category', 'chargesheet_status', 
         'num_parties', 'num_hearings', 
-        'filing_to_first_list_days', 'listing_gap_days', 
+        'filing_to_first_list_days',
         'court_caseload', 'case_age_days', 
         'female_defendant', 'female_petitioner'
     ]
@@ -60,15 +61,19 @@ def train_neural_network():
         Dense(num_classes, activation='softmax')  # Multi-class classification
     ])
     
+    class_weights = compute_class_weight('balanced', classes=np.unique(y), y=y)
+    class_weight_dict = dict(enumerate(class_weights))
+    
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     
     print("\n--- Training Model ---")
     history = model.fit(
         X_train, y_train,
-        validation_split=0.2,
-        epochs=15,
+        validation_split=0.1,
+        epochs=30,
         batch_size=128,
-        verbose=1
+        verbose=1,
+        class_weight=class_weight_dict
     )
     
     print("\n--- Evaluating Model ---")
@@ -88,6 +93,9 @@ def train_neural_network():
     artifacts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'artifacts')
     os.makedirs(artifacts_dir, exist_ok=True)
     
+    with open(os.path.join(artifacts_dir, 'nn_scaler.pkl'), 'wb') as f:
+        pickle.dump(scaler, f)
+        
     model.save(os.path.join(artifacts_dir, 'disposal_nn_model.keras'))
     
     with open(os.path.join(artifacts_dir, 'results_metrics.txt'), 'a') as f:

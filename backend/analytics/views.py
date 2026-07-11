@@ -160,6 +160,7 @@ class AdvancedPredictView(APIView):
             pred = predict_for_case(custom_data=data)
             
         if 'error' in pred:
+            print("PREDICTION ERROR:", pred)
             return Response(pred, status=400)
             
         # Generate the 3-phase roadmap based on predictions

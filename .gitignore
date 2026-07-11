@@ -1,58 +1,38 @@
-# ==========================================
-# JusticeWatch Project .gitignore
-# Excludes backend, frontend, and OS files
-# ==========================================
-
-# --- Python / Django Backend ---
+# Python/Django
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-env/
-venv/
 .venv/
-ENV/
-env.bak/
-venv.bak/
-# db.sqlite3 # Un-ignored so real demo data is pushed to GitHub
-db.sqlite3-journal
-backend/ml_pipeline/data/
+venv/
+env/
+.env
 
+# Node/React
+node_modules/
+dist/
+build/
+.npm/
+package-lock.json
 
-# --- Node / React Frontend ---
-frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
-frontend/*.local
-frontend/.env
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.eslintcache
-
-# --- Editors and IDEs ---
+# IDE/OS
 .vscode/
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.swp
-*.swo
-
-# --- System / OS specific ---
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# --- Gemini AI ---
-# GEMINI.md # Un-ignored so prompt constraints are included
+# Machine Learning Artifacts & Data
+backend/ml_pipeline/data/**/*.csv
+*.csv
+*.zip
+*.tar.gz
+backend/ml_pipeline/artifacts/*.pkl
+backend/ml_pipeline/artifacts/*.keras
+backend/ml_pipeline/artifacts/*.h5
+*.sqlite3
+
+!backend/ml_pipeline/artifacts/duration_regressor.pkl
+!backend/ml_pipeline/artifacts/disposal_classifier_dt.pkl
+!backend/ml_pipeline/artifacts/disposal_classifier_knn.pkl
+!backend/ml_pipeline/artifacts/disposal_nn_model.keras
+!backend/ml_pipeline/artifacts/nn_scaler.pkl
+!backend/ml_pipeline/artifacts/encoders.pkl

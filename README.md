@@ -23,7 +23,6 @@
 - [Architecture & Modules](#-architecture--modules)
 - [Machine Learning Integration](#-machine-learning-integration)
 - [Getting Started](#-getting-started)
-- [Documentation](#-documentation)
 
 ---
 
@@ -53,7 +52,7 @@ It is designed with strict **Role-Based Access Control (RBAC)**, separating the 
 ## 🛠️ Tech Stack
 
 **Frontend Interface**
-- **Framework:** React 19 + TypeScript
+- **Framework:** React 19 + ES6 JavaScript
 - **Bundler:** Vite
 - **Styling:** Hand-crafted CSS Variables (Custom Dark Judicial Theme, Zero external CSS frameworks)
 - **Routing:** React Router v6
@@ -64,7 +63,8 @@ It is designed with strict **Role-Based Access Control (RBAC)**, separating the 
 - **Authentication:** JWT (JSON Web Tokens)
 - **Database:** SQLite (Demo dataset: 131,000+ case records)
 - **Data Processing:** Pandas
-- **Machine Learning:** Scikit-Learn (Random Forest Classification)
+- **Visualization (ML):** Seaborn & Plotly
+- **Machine Learning:** Scikit-Learn & TensorFlow/Keras
 
 ---
 
@@ -92,18 +92,18 @@ graph TD;
     Timeline --> DB
     Analytics --> DB
     
-    Cases --> ML[Scikit-Learn Random Forest Predictor]
+    Cases --> ML[Predictive Models (Scikit-Learn & Keras)]
 ```
 
 ---
 
 ## 🤖 Machine Learning Integration
-JusticeWatch leverages a pre-trained **Random Forest Classifier** built with Scikit-Learn to estimate the "Difficulty Tier" (Low, Medium, High, Critical) of an incoming case. 
+JusticeWatch leverages multiple predictive models to estimate case outcomes and durations based on historical data.
 
-The predictive model assesses multi-dimensional parameters including:
-- Criminal vs. Civil Case Categories
-- Historical severity index of specific charges (e.g., Financial Fraud vs. Property Dispute)
-- Initial filing delays and chargesheet lag times
+- **Duration Regression Model**: Predicts the number of days a case will take to resolve. Evaluated using Linear and Polynomial Regression, with Polynomial Regression deployed as the most accurate model.
+- **Multi-class Disposal Classifier Comparison**: Evaluates Random Forest, Decision Tree, and K-Nearest Neighbors to predict the case disposal type.
+- **Deep Learning Baseline**: A Feedforward Neural Network was also developed for comparison, demonstrating that Random Forest significantly outperforms standard neural networks on this specific tabular dataset.
+- **Fairness and Bias Audit**: The model predictions undergo a gender bias audit (Male vs Female Defendants) to ensure the Average Prediction Error variance remains within acceptable operational limits.
 
 This prevents severe cases from stagnating in the backlog by preemptively flagging them for fast-tracked judicial assignment.
 
@@ -118,8 +118,6 @@ To get a local copy up and running, follow these simple steps.
 - Node.js 18+
 
 ### Installation & Execution
-Detailed setup instructions, including database population and mock data generation, are maintained in our **[Guidelines.md](./Guidelines.md)**.
-
 1. **Clone the repo**
    ```sh
    git clone https://github.com/your-username/JusticeWatch.git
@@ -133,6 +131,20 @@ Detailed setup instructions, including database population and mock data generat
    source venv/Scripts/activate  # (Windows)
    pip install -r requirements.txt
    python manage.py migrate
+   ```
+   *Note: By design, this repository does not ship with any default or hardcoded credentials. To access the admin panel, you must create a superuser interactively:*
+   ```sh
+   python manage.py createsuperuser
+   ```
+
+   **Generate the Machine Learning Models:**
+   The Random Forest model artifact is too large for GitHub and must be generated locally. Run the training script once before starting the server. (If you skip this, the app will gracefully return a clear error in the predictions view rather than crashing).
+   ```sh
+   python ml_pipeline/train_model.py
+   ```
+
+   **Start the Development Server:**
+   ```sh
    python manage.py runserver
    ```
 

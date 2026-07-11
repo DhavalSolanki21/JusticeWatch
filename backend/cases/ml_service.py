@@ -3,11 +3,16 @@ import pickle
 import pandas as pd
 from datetime import date
 from django.conf import settings
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from .models import Case
 
 # Paths to the saved ML files
 DURATION_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'duration_regressor.pkl')
 DISPOSAL_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'disposal_classifier_rf.pkl')
+DT_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'disposal_classifier_dt.pkl')
+KNN_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'disposal_classifier_knn.pkl')
+NN_MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'disposal_nn_model.keras')
+NN_SCALER_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'nn_scaler.pkl')
 ENCODERS_PATH = os.path.join(settings.BASE_DIR, 'ml_pipeline', 'artifacts', 'encoders.pkl')
 
 def safe_encode(le, val):
@@ -22,19 +27,39 @@ def safe_encode(le, val):
 
 _rf_duration = None
 _rf_disposal = None
+_dt_disposal = None
+_knn_disposal = None
+_nn_disposal = None
+_nn_scaler = None
 _encoders = None
 
 # Force Django to auto-reload and clear memory cache for new models
 def load_models():
-    global _rf_duration, _rf_disposal, _encoders
-    if _rf_duration is None:
+    global _rf_duration, _rf_disposal, _dt_disposal, _knn_disposal, _nn_disposal, _nn_scaler, _encoders
+    if _rf_duration is None or _encoders is None:
         with open(DURATION_MODEL_PATH, 'rb') as f:
             _rf_duration = pickle.load(f)
         with open(DISPOSAL_MODEL_PATH, 'rb') as f:
             _rf_disposal = pickle.load(f)
+        try:
+            with open(DT_MODEL_PATH, 'rb') as f:
+                _dt_disposal = pickle.load(f)
+            with open(KNN_MODEL_PATH, 'rb') as f:
+                _knn_disposal = pickle.load(f)
+        except Exception as e:
+            print(f"DT/KNN load error (ignoring if just missing): {e}")
+            
+        try:
+            with open(NN_SCALER_PATH, 'rb') as f:
+                _nn_scaler = pickle.load(f)
+            import tensorflow as tf
+            _nn_disposal = tf.keras.models.load_model(NN_MODEL_PATH)
+        except Exception as e:
+            print(f"NN load error (ignoring if just missing): {e}")
+            
         with open(ENCODERS_PATH, 'rb') as f:
             _encoders = pickle.load(f)
-    return _rf_duration, _rf_disposal, _encoders
+    return _rf_duration, _rf_disposal, _dt_disposal, _knn_disposal, _nn_disposal, _nn_scaler, _encoders
 
 def predict_for_case(case=None, custom_data=None):
     """
@@ -48,7 +73,7 @@ def predict_for_case(case=None, custom_data=None):
         }
         
     try:
-        rf_duration, rf_disposal, encoders = load_models()
+        rf_duration, rf_disposal, dt_disposal, knn_disposal, nn_disposal, nn_scaler, encoders = load_models()
             
         le_crime = encoders.get('crime_type')
         le_category = encoders.get('case_category')
@@ -113,7 +138,6 @@ def predict_for_case(case=None, custom_data=None):
             'num_parties': num_parties,
             'num_hearings': num_hearings,
             'filing_to_first_list_days': filing_to_first_list_days,
-            'listing_gap_days': listing_gap_days,
             'court_caseload': court_caseload,
             'female_defendant': female_defendant,
             'female_petitioner': female_petitioner
@@ -127,7 +151,6 @@ def predict_for_case(case=None, custom_data=None):
             'num_parties': num_parties,
             'num_hearings': num_hearings,
             'filing_to_first_list_days': filing_to_first_list_days,
-            'listing_gap_days': listing_gap_days,
             'court_caseload': court_caseload,
             'case_age_days': case_age_days,
             'female_defendant': female_defendant,
@@ -154,6 +177,39 @@ def predict_for_case(case=None, custom_data=None):
             
         disp_text = f"Likely ({disp_type_str.title()})"
         
+        # --- Model Comparison Dictionary ---
+        model_comparison = []
+        
+        # Helper to extract name + confidence
+        def format_pred(model, name, use_scaler=False, is_nn=False):
+            if not model: return None
+            try:
+                if is_nn:
+                    X_input = nn_scaler.transform(df_clf) if nn_scaler else df_clf
+                    import numpy as np
+                    probs = model.predict(X_input, verbose=0)[0]
+                    c_idx = np.argmax(probs)
+                    c_conf = max(probs)
+                else:
+                    probs = model.predict_proba(df_clf)[0]
+                    c_idx = model.predict(df_clf)[0]
+                    c_conf = max(probs)
+                    
+                c_str = le_disp.inverse_transform([c_idx])[0] if le_disp else "resolved"
+                return {"model": name, "prediction": f"Likely ({c_str.title()})", "confidence": round(float(c_conf) * 100, 1)}
+            except Exception as e:
+                print(f"Comparison error on {name}: {e}")
+                return None
+        
+        cmp_rf = format_pred(rf_disposal, "Random Forest")
+        if cmp_rf: model_comparison.append(cmp_rf)
+        cmp_dt = format_pred(dt_disposal, "Decision Tree")
+        if cmp_dt: model_comparison.append(cmp_dt)
+        cmp_knn = format_pred(knn_disposal, "K-Nearest Neighbors")
+        if cmp_knn: model_comparison.append(cmp_knn)
+        cmp_nn = format_pred(nn_disposal, "Neural Network (Keras)", is_nn=True)
+        if cmp_nn: model_comparison.append(cmp_nn)
+        
         # Feature Importance Factors (just heuristic rules based on input for UI explanation)
         risk_factors = []
         if days_since_filing > 365:
@@ -171,7 +227,8 @@ def predict_for_case(case=None, custom_data=None):
             'duration_confidence': dur_confidence,
             'disposal_likelihood': disp_text,
             'disposal_confidence': disp_confidence,
-            'risk_factors': risk_factors
+            'risk_factors': risk_factors,
+            'model_comparison': model_comparison
         }
         
     except Exception as e:

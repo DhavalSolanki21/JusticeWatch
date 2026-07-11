@@ -181,7 +181,7 @@ const Predictions = () => {
                   <div className="grid-2" style={{ gap: '1rem' }}>
                     <div className="form-group">
                       <label>Case Category</label>
-                      <select className="form-control" value={customData.case_category} onChange={(e) => setCustomData({ ...customData, case_category: e.target.value })}>
+                      <select name="case_category" className="form-control" value={customData.case_category} onChange={(e) => setCustomData({ ...customData, case_category: e.target.value })}>
                         <option>Criminal</option>
                         <option>Civil</option>
                         <option>Family</option>
@@ -190,11 +190,11 @@ const Predictions = () => {
                     </div>
                     <div className="form-group">
                       <label>Crime/Dispute Type</label>
-                      <input type="text" className="form-control" value={customData.crime_type} onChange={(e) => setCustomData({ ...customData, crime_type: e.target.value })} />
+                      <input type="text" name="crime_type" className="form-control" value={customData.crime_type} onChange={(e) => setCustomData({ ...customData, crime_type: e.target.value })} />
                     </div>
                     <div className="form-group">
                       <label>Chargesheet Status</label>
-                      <select className="form-control" value={customData.chargesheet_status} onChange={(e) => setCustomData({ ...customData, chargesheet_status: e.target.value })}>
+                      <select name="chargesheet_status" className="form-control" value={customData.chargesheet_status} onChange={(e) => setCustomData({ ...customData, chargesheet_status: e.target.value })}>
                         <option>Not Filed</option>
                         <option>Under Review</option>
                         <option>Filed</option>
@@ -203,15 +203,15 @@ const Predictions = () => {
                     </div>
                     <div className="form-group">
                       <label>Number of Parties</label>
-                      <input type="number" className="form-control" value={customData.num_parties} onChange={(e) => setCustomData({ ...customData, num_parties: parseInt(e.target.value) || 1 })} />
+                      <input type="number" name="num_parties" className="form-control" value={customData.num_parties} onChange={(e) => setCustomData({ ...customData, num_parties: parseInt(e.target.value) || 1 })} />
                     </div>
                     <div className="form-group">
                       <label>Number of Hearings So Far</label>
-                      <input type="number" className="form-control" value={customData.num_hearings} onChange={(e) => setCustomData({ ...customData, num_hearings: parseInt(e.target.value) || 0 })} />
+                      <input type="number" name="num_hearings" className="form-control" value={customData.num_hearings} onChange={(e) => setCustomData({ ...customData, num_hearings: parseInt(e.target.value) || 0 })} />
                     </div>
                     <div className="form-group">
                       <label>Filing to First List (Days)</label>
-                      <input type="number" className="form-control" value={customData.filing_to_first_list_days} onChange={(e) => setCustomData({ ...customData, filing_to_first_list_days: parseInt(e.target.value) || 0 })} />
+                      <input type="number" name="filing_to_first_list_days" className="form-control" value={customData.filing_to_first_list_days} onChange={(e) => setCustomData({ ...customData, filing_to_first_list_days: parseInt(e.target.value) || 0 })} />
                     </div>
                     <div className="form-group">
                       <label>Listing Gap (Days)</label>
@@ -219,11 +219,11 @@ const Predictions = () => {
                     </div>
                     <div className="form-group">
                       <label>Court Caseload</label>
-                      <input type="number" className="form-control" value={customData.court_caseload} onChange={(e) => setCustomData({ ...customData, court_caseload: parseInt(e.target.value) || 0 })} />
+                      <input type="number" name="court_caseload" className="form-control" value={customData.court_caseload} onChange={(e) => setCustomData({ ...customData, court_caseload: parseInt(e.target.value) || 0 })} />
                     </div>
                     <div className="form-group">
                       <label>Case Age (Days)</label>
-                      <input type="number" className="form-control" value={customData.case_age_days} onChange={(e) => setCustomData({ ...customData, case_age_days: parseInt(e.target.value) || 0 })} />
+                      <input type="number" name="case_age_days" className="form-control" value={customData.case_age_days} onChange={(e) => setCustomData({ ...customData, case_age_days: parseInt(e.target.value) || 0 })} />
                     </div>
                   </div>
                   <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={isPredicting}>
@@ -258,18 +258,18 @@ const Predictions = () => {
             }
 
               {predictionResult &&
-            <div className="animate-fadeInUp">
+            <div data-testid="prediction-result" className="animate-fadeInUp">
                   <div className="stat-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                     <div style={{ padding: '0.75rem', border: '1px solid var(--border-main)', borderRadius: '6px', backgroundColor: 'var(--bg-main)' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Duration Risk</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: predictionResult.predictions.duration_risk === 'critical' ? 'var(--severity-critical)' : 'var(--accent)' }}>
+                      <div data-testid="duration-days" style={{ fontSize: '1.1rem', fontWeight: 'bold', color: predictionResult.predictions.duration_risk === 'critical' ? 'var(--severity-critical)' : 'var(--accent)' }}>
                         {predictionResult.predictions.duration_risk.toUpperCase()}
                       </div>
                       <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>{predictionResult.predictions.duration_confidence}% Confidence</div>
                     </div>
                     <div style={{ padding: '0.75rem', border: '1px solid var(--border-main)', borderRadius: '6px', backgroundColor: 'var(--bg-main)' }}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>12-Month Disposal</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{predictionResult.predictions.disposal_likelihood}</div>
+                      <div data-testid="disposal-outcome" style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{predictionResult.predictions.disposal_likelihood}</div>
                       <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>{predictionResult.predictions.disposal_confidence}% Confidence</div>
                     </div>
                   </div>
@@ -287,6 +287,34 @@ const Predictions = () => {
                       </div>
                 )}
                   </div>
+                  
+                  {predictionResult.predictions.model_comparison && predictionResult.predictions.model_comparison.length > 0 && (
+                    <div style={{ marginTop: '2rem' }}>
+                      <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '1rem' }}>Model Output Comparison</h4>
+                      <div className="jw-table-wrapper" style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
+                        <table className="jw-table" style={{ fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Algorithm</th>
+                              <th>Predicted Disposal</th>
+                              <th className="text-right">Confidence</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {predictionResult.predictions.model_comparison.map((cmp, idx) => (
+                              <tr key={idx} data-testid="model-comparison-row">
+                                <td style={{ fontWeight: cmp.model === 'Random Forest' ? 'bold' : 'normal' }}>
+                                  {cmp.model} {cmp.model === 'Random Forest' && <span className="badge badge-pending" style={{marginLeft: '0.5rem', fontSize: '0.65rem'}}>Deployed</span>}
+                                </td>
+                                <td>{cmp.prediction}</td>
+                                <td className="text-right td-mono">{cmp.confidence}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                   
                   <div style={{ marginTop: '1.5rem', fontSize: '0.8rem' }}>
                     <strong>Identified Risk Factors:</strong>
