@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { X, Landmark, ShieldAlert, ArrowRight, FolderKanban, ClipboardCheck } from "lucide-react";
 
 import "./DistrictDetailModal.css";

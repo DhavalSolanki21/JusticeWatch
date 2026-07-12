@@ -7,6 +7,7 @@ db.sqlite3
 # Environments and Secrets
 .env
 .env.*
+!.env.example
 .venv/
 venv/
 env/
@@ -16,13 +17,19 @@ ENV/
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+.pytest_cache/
+
+# Django Static & Media
+backend/staticfiles/
+backend/media/
 
 # Node / React Frontend Dependencies & Builds
 node_modules/
 dist/
 build/
 .npm/
-package-lock.json
+# package-lock.json is intentionally NOT ignored
 
 # Editors / IDEs / OS
 .vscode/
@@ -30,7 +37,8 @@ package-lock.json
 .DS_Store
 Thumbs.db
 
-# Machine Learning Data and Artifacts (Except Checked-in Models)
+# Machine Learning Data and Artifacts
+# Option B: We commit generated model binaries using Git LFS
 backend/ml_pipeline/data/
 backend/ml_pipeline/artifacts/*.pkl
 backend/ml_pipeline/artifacts/*.keras

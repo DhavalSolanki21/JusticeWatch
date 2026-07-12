@@ -1,24 +1,22 @@
 # GitHub Linguist stats adjustment - Prioritize Python ML backend and core code
-
 # Mark all styling folders and stylesheet files as vendored/hidden
 **/styles/* linguist-vendored
 **/css/* linguist-vendored
 **/*.css linguist-vendored
 **/*.scss linguist-vendored
 **/*.less linguist-vendored
-
 # Mark compiled build, bundle, and static deployment directories as vendored
 **/dist/** linguist-vendored
 **/build/** linguist-vendored
 **/.next/** linguist-vendored
 backend/staticfiles/** linguist-vendored
 frontend/dist/** linguist-vendored
-
 # Mark dependency directories
 **/node_modules/** linguist-vendored
 **/bower_components/** linguist-vendored
 **/vendor/** linguist-vendored
-
 # Mark template files and documentation
 **/templates/**/*.html linguist-documentation
 **/*.md linguist-documentation
+backend/ml_pipeline/artifacts/*.pkl filter=lfs diff=lfs merge=lfs -text
+backend/ml_pipeline/artifacts/*.keras filter=lfs diff=lfs merge=lfs -text

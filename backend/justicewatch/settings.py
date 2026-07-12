@@ -9,7 +9,9 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-b&ba4!&aixh8%8+y-0z25=$sg0t57ry-x0yxpt+4d*yqnxqkb&'
+import os
+
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-CHANGE-ME-IN-DEV')
 
 DEBUG = True
 
