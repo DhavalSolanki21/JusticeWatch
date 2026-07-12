@@ -7,10 +7,19 @@
 [![Django REST Framework](https://img.shields.io/badge/DRF-3.17.1-red?style=for-the-badge&logo=django&logoColor=white)](https://www.django-rest-framework.org/)
 [![React.js](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Scikit-Learn](https://img.shields.io/badge/Scikit_Learn-1.9.0-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 *An optimized, fully decoupled analytics system designed to optimize judicial operations and reduce backlogs in Gujarat's District Courts through machine-learning-driven case complexity metrics.*
 
 </div>
+
+---
+
+## 📖 Overview
+
+JusticeWatch provides an advanced, data-driven interface to manage judicial backlogs efficiently. The system is designed with two distinct operational scopes:
+- **Judge View (Analytics Mode):** District-wide scope allowing judges to assess congestion, review state-wide metrics, and verify lawyer registrations.
+- **Lawyer View (Workbench Mode):** Targeted scope for legal professionals to monitor active cases, compile briefs, and analyze prediction metrics for individual cases.
 
 ---
 
@@ -58,32 +67,43 @@ graph TB;
 
 ### 🔌 1. Decoupled API-First Architecture
 The backend is built strictly as a stateless REST API, meaning zero HTML pages are rendered by Django. Data is transferred via clean JSON contracts, allowing the React frontend to run independently.
-- **RESTful Endpoints**: Adheres to REST conventions via DRF viewsets, routers, and custom serializations.
-- **Automatic Documentation**: Exposes interactive Swagger API endpoints (via `drf-yasg`) for rapid backend verification.
 
 ### 🔐 2. JWT-Based Role-Based Access Control (RBAC)
 - **Stateless Sessions**: Employs JSON Web Tokens (`rest_framework_simplejwt`) to authenticate incoming API requests.
-- **Access Control Matrix**:
-  | Role | Scope | Permitted Actions |
-  | :--- | :--- | :--- |
-  | **Judge** | District-wide Scope | Access system analytics, heatmaps, congestion metrics, and verify newly registered lawyers. |
-  | **Lawyer** | Assigned Case Scope | Manage personal workbench, update active cases, and compile case briefs. |
-  | **Public** | Unverified / Guest | Limited case lookup and landing page view; restricted from analytics and detail pages. |
+- **Access Control Matrix**: Handles access separation between verified Judges, authenticated Lawyers, and Public endpoints.
 
 ### 📈 3. High-Performance ORM & Query Optimizations
-To handle a dataset of **131,000+ case records** smoothly on a lightweight SQLite engine, the backend avoids memory-heavy loops:
-- **Database-Level Aggregation**: Uses Django's `TruncMonth`, `Count`, `Avg`, and `F` expressions to group, scale, and analyze backlog bracketing directly inside the database query plan.
-- **Optimized SQL**: Minimizes query counts and prevents N+1 query traps using appropriate selective lookups.
+To handle a dataset of **131,000+ case records** smoothly on a lightweight SQLite engine, the backend utilizes Django's database-level aggregations (`TruncMonth`, `Count`, `Avg`, `F` expressions) to prevent memory-heavy application-level loops.
 
 ### 🤖 4. Scikit-Learn Predictive ML Pipeline
-- **Predictive Engine**: Integrates a trained **Random Forest Classifier** to analyze features (including FIR age, case category, and district load) to forecast a case's duration risk (Low, Medium, High, Critical) with excellent training precision.
-- **Model Evaluation**: The pipeline evaluates multiple algorithms (Decision Tree, KNN, and Random Forests) alongside a Keras Feedforward Neural Network baseline, deploying Random Forest as the optimal tabular performance leader.
-- **Roadmap Generation**: Converts model outcomes into structured 3-phase progression paths (Pre-Trial, Trial, and Judgment) detailing estimated phase durations and evidentiary bottlenecks.
+- **Predictive Engine**: Integrates trained models (including a **Random Forest Classifier**) to forecast a case's duration risk (Low, Medium, High, Critical) based on features like FIR age and category.
+- **Git LFS Artifacts**: All pre-trained `.pkl` and `.keras` models are tracked via Git LFS, ensuring the repository remains lightweight while enabling immediate, out-of-the-box predictions on a fresh clone.
 
 ### 🎨 5. State-Driven, Zero-Dependency React SPA
-- **Clean State Flow**: Implements React context providers to manage auth status, token refreshing, and global themes.
-- **Tailwind-Free Responsive Design**: Adheres to strict constraints by avoiding CSS utility frameworks. The layout is built with raw CSS flexbox/grid and custom design tokens (`index.css`).
-- **SVG Vector Graphics**: Uses custom React components that compute coordinate maps programmatically to draw maps and 24-month charts without external charting libraries.
+- **Clean State Flow**: Context-driven architecture built in plain JavaScript (ES6+ JSX).
+- **Tailwind-Free Design**: All styling is driven by custom CSS modules and tokens (`index.css`) rather than bloated utility frameworks.
+
+---
+
+## 📁 Folder Structure
+
+```text
+JusticeWatch/
+├── backend/                  # Django REST API & ML Pipeline
+│   ├── accounts/             # JWT Auth & Custom User Models
+│   ├── analytics/            # Aggregation endpoints & stats
+│   ├── cases/                # Case records & ML inference layer
+│   ├── districts/            # District metadata
+│   ├── ml_pipeline/          # Scikit-learn training & model artifacts (Git LFS)
+│   └── justicewatch/         # Core Django configuration
+├── frontend/                 # React SPA
+│   ├── src/
+│   │   ├── components/       # Reusable UI elements (zero-dependency SVGs)
+│   │   ├── pages/            # View components (Dashboard, Analytics)
+│   │   └── services/         # Axios/Fetch API wrappers
+├── docs/                     # Additional project documentation
+└── .github/                  # CI workflows and templates
+```
 
 ---
 
@@ -92,8 +112,16 @@ To handle a dataset of **131,000+ case records** smoothly on a lightweight SQLit
 ### Prerequisites
 - Python 3.10+
 - Node.js 18+
+- [Git LFS](https://git-lfs.github.com/) (Required to pull the ML model binaries)
 
-### 1. Backend Service Setup
+### 1. Environment Setup
+Before starting the backend, you must configure your environment variables.
+```bash
+cp .env.example .env
+# Edit .env and supply your preferred ADMIN_USERNAME, ADMIN_PASSWORD, and DJANGO_SECRET_KEY
+```
+
+### 2. Backend Service Setup
 ```bash
 # Navigate to backend
 cd backend
@@ -109,18 +137,15 @@ pip install -r requirements.txt
 python manage.py migrate
 
 # Create the primary administrative account
-python manage.py createsuperuser
-
-# Generate local Scikit-Learn ML artifacts
-python ml_pipeline/train_model.py
+python create_admin.py
 
 # Start Django development server
 python manage.py runserver
 ```
 
-### 2. Frontend SPA Setup
+### 3. Frontend SPA Setup
 ```bash
-# Navigate to frontend
+# Navigate to frontend in a new terminal
 cd frontend
 
 # Install Node modules
@@ -132,17 +157,32 @@ npm run dev
 
 ---
 
-## 📊 Dataset Sourcing
+## 🧠 ML Dataset & Retraining
 
-The predictive models are trained on anonymized judicial data from the **Development Data Lab (DDL)**. 
+JusticeWatch ships with pre-trained models via Git LFS, so you can run the prediction engine immediately without retraining.
+
+However, if you want to execute `backend/ml_pipeline/train_model.py` to regenerate the models yourself, you will need the raw training data.
+The predictive models are trained on anonymized judicial data from the **Development Data Lab (DDL)** (~15GB). 
 To replicate the ML pipeline:
 1. Download the public court records from the [Development Data Lab Portal](https://www.devdatalab.org/judicial-data).
 2. Save the CSV records to `backend/ml_pipeline/data/cases/` and key files to `backend/ml_pipeline/data/keys/`.
-3. Run the training script: `python backend/ml_pipeline/train_model.py`
+3. Ensure your local `venv` is active and run: `python backend/ml_pipeline/train_model.py`
 
 ---
 
-## 🧹 Repository Hygiene & Rules
-- **Linguist Customization**: Files are classified in [.gitattributes](file:///D:/VS%20Code/JusticeWatch/.gitattributes) to prevent static styles and builds from skewing repository language statistics.
-- **Git Ignoring**: The [.gitignore](file:///D:/VS%20Code/JusticeWatch/.gitignore) blocks local databases (`db.sqlite3`), PyCache, local `.env` variables, and node packages.
-- **Modular Guidelines**: Coding conventions, performance boundaries, and Ponytail AI compaction details are described in **[GUIDELINES.md](./GUIDELINES.md)**.
+## 📡 API Overview
+
+The backend uses Django REST Framework to expose JSON endpoints. Below are a few key routes:
+- `/api/auth/token/`: JWT Authentication.
+- `/api/analytics/dashboard/`: District-wide operational metrics (Judge-only).
+- `/api/cases/prediction/`: Accepts case parameters and returns a duration risk tier via the loaded ML artifacts.
+
+Interactive API documentation is automatically generated by `drf-yasg` and can be accessed at `/swagger/` or `/redoc/` while the backend is running.
+
+---
+
+## 🤝 Contributing
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

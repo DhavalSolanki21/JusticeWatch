@@ -3,23 +3,34 @@ from .models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
 
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    
+    password = serializers.CharField(
+        write_only=True, required=True, validators=[validate_password]
+    )
+
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'role', 'full_name', 'bar_council_id', 'designation')
-        
+        fields = (
+            "username",
+            "email",
+            "password",
+            "role",
+            "full_name",
+            "bar_council_id",
+            "designation",
+        )
+
     def create(self, validated_data):
         user = User.objects.create(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            role=validated_data['role'],
-            full_name=validated_data.get('full_name', ''),
-            bar_council_id=validated_data.get('bar_council_id', ''),
-            designation=validated_data.get('designation', '')
+            username=validated_data["username"],
+            email=validated_data["email"],
+            role=validated_data["role"],
+            full_name=validated_data.get("full_name", ""),
+            bar_council_id=validated_data.get("bar_council_id", ""),
+            designation=validated_data.get("designation", ""),
         )
-        user.set_password(validated_data['password'])
+        user.set_password(validated_data["password"])
         user.is_verified = False  # Explicitly enforce this
         user.save()
         return user
@@ -28,30 +39,45 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
-        
+
         if not self.user.is_verified and not self.user.is_superuser:
-            raise serializers.ValidationError({"detail": "Account is not verified. Please wait for admin approval."})
-            
-        data.update({
-            'user': {
-                'id': self.user.id,
-                'role': self.user.role,
-                'full_name': self.user.full_name,
-                'is_verified': self.user.is_verified
+            raise serializers.ValidationError(
+                {"detail": "Account is not verified. Please wait for admin approval."}
+            )
+
+        data.update(
+            {
+                "user": {
+                    "id": self.user.id,
+                    "role": self.user.role,
+                    "full_name": self.user.full_name,
+                    "is_verified": self.user.is_verified,
+                }
             }
-        })
+        )
         return data
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('display_name', 'email', 'photo')
+        fields = ("display_name", "email", "photo")
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    district_name = serializers.CharField(source='district_scope.name', read_only=True)
+    district_name = serializers.CharField(source="district_scope.name", read_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'full_name', 'display_name', 'photo', 'district_scope', 'district_name', 'is_verified')
-
+        fields = (
+            "id",
+            "username",
+            "email",
+            "role",
+            "full_name",
+            "display_name",
+            "photo",
+            "district_scope",
+            "district_name",
+            "is_verified",
+        )

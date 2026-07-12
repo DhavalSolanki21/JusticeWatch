@@ -7,27 +7,30 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
 schema_view = get_schema_view(
-   openapi.Info(
-      title="JusticeWatch API",
-      default_version='v1',
-      description="API documentation for JusticeWatch Analytics System",
-   ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
+    openapi.Info(
+        title="JusticeWatch API",
+        default_version="v1",
+        description="API documentation for JusticeWatch Analytics System",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
     # Swagger sometimes redirects to accounts/login/ for session auth
-    path('accounts/login/', admin.site.login),
-    path('api/auth/', include('accounts.urls')),
-    path('api/districts/', include('districts.urls')),
-    path('api/cases/', include('cases.urls')),
-    path('api/analytics/', include('analytics.urls')),
-    path('api/timeline/', include('timeline.urls')),
-    
+    path("accounts/login/", admin.site.login),
+    path("api/auth/", include("accounts.urls")),
+    path("api/districts/", include("districts.urls")),
+    path("api/cases/", include("cases.urls")),
+    path("api/analytics/", include("analytics.urls")),
+    path("api/timeline/", include("timeline.urls")),
     # Swagger Docs
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path(
+        "swagger/",
+        schema_view.with_ui("swagger", cache_timeout=0),
+        name="schema-swagger-ui",
+    ),
 ]
 
 if settings.DEBUG:

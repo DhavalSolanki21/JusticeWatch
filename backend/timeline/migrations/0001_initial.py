@@ -10,25 +10,47 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('cases', '0001_initial'),
+        ("cases", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Hearing',
+            name="Hearing",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('hearing_date', models.DateField()),
-                ('purpose', models.CharField(max_length=255)),
-                ('outcome_notes', models.TextField(blank=True, null=True)),
-                ('next_hearing_date', models.DateField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='hearings', to='cases.case')),
-                ('logged_by', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='logged_hearings', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("hearing_date", models.DateField()),
+                ("purpose", models.CharField(max_length=255)),
+                ("outcome_notes", models.TextField(blank=True, null=True)),
+                ("next_hearing_date", models.DateField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "case",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="hearings",
+                        to="cases.case",
+                    ),
+                ),
+                (
+                    "logged_by",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="logged_hearings",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-hearing_date'],
+                "ordering": ["-hearing_date"],
             },
         ),
     ]

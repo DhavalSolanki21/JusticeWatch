@@ -3,8 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import HearingViewSet
 
 router = DefaultRouter()
-router.register(r'', HearingViewSet, basename='hearing')
+router.register(r"", HearingViewSet, basename="hearing")
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]
