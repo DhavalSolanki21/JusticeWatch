@@ -19,17 +19,75 @@ class SystemOverviewAPI(APIView):
         from districts.models import DistrictSummary
         from django.db.models import Sum
         
-        d_qs = DistrictSummary.objects.all()
+        d_qs = DistrictSummary.objects.filter(district__state__code="GJ")
         if district_name and district_name != "All":
             d_qs = d_qs.filter(district__name=district_name)
             
-        aggs = d_qs.aggregate(p=Sum('pending_count'), d=Sum('disposed_count'))
-        pending = aggs['p'] or 0
-        disposed = aggs['d'] or 0
+        if not d_qs.exists():
+            # Fall back to Case objects if summaries haven't been computed yet
+            # (Very useful for tests and brand new databases)
+            case_qs = Case.objects.filter(district__state__code="GJ")
+            if district_name and district_name != "All":
+                case_qs = case_qs.filter(district__name=district_name)
+            pending = case_qs.filter(case_status="Pending").count()
+            disposed = case_qs.filter(case_status="Disposed").count()
+            
+            from django.db.models import Count
+            congested_cases = case_qs.filter(case_status="Pending").values('district__name').annotate(count=Count('id')).order_by('-count')[:5]
+            top_congested_districts = {item['district__name']: item['count'] for item in congested_cases}
+            
+            # Dynamic difficulty breakdown
+            tiers = case_qs.filter(case_status="Pending").values('difficulty_tier').annotate(count=Count('id'))
+            difficulty_breakdown = {item['difficulty_tier']: item['count'] for item in tiers}
+            
+            # Dynamic backlog age brackets
+            from datetime import datetime
+            now = datetime.now().date()
+            pending_cases = case_qs.filter(case_status="Pending")
+            
+            backlog_age_brackets = {
+                '0-1 Year': 0,
+                '1-3 Years': 0,
+                '3-5 Years': 0,
+                '5-10 Years': 0,
+                '10+ Years': 0,
+            }
+            for case in pending_cases:
+                days = (now - case.filed_date).days
+                if days <= 365:
+                    backlog_age_brackets['0-1 Year'] += 1
+                elif days <= 1095:
+                    backlog_age_brackets['1-3 Years'] += 1
+                elif days <= 1825:
+                    backlog_age_brackets['3-5 Years'] += 1
+                elif days <= 3650:
+                    backlog_age_brackets['5-10 Years'] += 1
+                else:
+                    backlog_age_brackets['10+ Years'] += 1
+        else:
+            aggs = d_qs.aggregate(p=Sum('pending_count'), d=Sum('disposed_count'))
+            pending = aggs['p'] or 0
+            disposed = aggs['d'] or 0
+            
+            congested = d_qs.order_by('-pending_count')[:5]
+            top_congested_districts = {c.district.name: c.pending_count for c in congested}
+            
+            difficulty_breakdown = {
+                "low": int(pending * 0.2),
+                "medium": int(pending * 0.5),
+                "high": int(pending * 0.2),
+                "critical": int(pending * 0.1)
+            }
+            
+            backlog_age_brackets = {
+                "0-1 Year": int(pending * 0.15),
+                "1-3 Years": int(pending * 0.35),
+                "3-5 Years": int(pending * 0.30),
+                "5-10 Years": int(pending * 0.15),
+                "10+ Years": int(pending * 0.05),
+            }
+            
         total = pending + disposed
-        
-        congested = d_qs.order_by('-pending_count')[:5]
-        top_congested_districts = {c.district.name: c.pending_count for c in congested}
 
         data = {
             "total_cases": total,
@@ -38,20 +96,9 @@ class SystemOverviewAPI(APIView):
                 "Pending": pending,
                 "Disposed": disposed
             },
-            "difficulty_breakdown": {
-                "low": int(pending * 0.2),
-                "medium": int(pending * 0.5),
-                "high": int(pending * 0.2),
-                "critical": int(pending * 0.1)
-            },
+            "difficulty_breakdown": difficulty_breakdown,
             "top_congested_districts": top_congested_districts,
-            "backlog_age_brackets": {
-                "0-1 Year": int(pending * 0.15),
-                "1-3 Years": int(pending * 0.35),
-                "3-5 Years": int(pending * 0.30),
-                "5-10 Years": int(pending * 0.15),
-                "10+ Years": int(pending * 0.05),
-            },
+            "backlog_age_brackets": backlog_age_brackets,
             "judge_distribution": {
                 "Hon. Unassigned": pending
             },

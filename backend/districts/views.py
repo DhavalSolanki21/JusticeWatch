@@ -14,7 +14,7 @@ class DistrictSummaryListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        summaries = list(DistrictSummary.objects.select_related("district").all())
+        summaries = list(DistrictSummary.objects.select_related("district").filter(district__state__code="GJ"))
         
         # We use fast approximations for the nested dicts to prevent full table scans on 5.3 million rows
         crime_dict = {}
@@ -118,5 +118,5 @@ class DistrictListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        districts = District.objects.all().values("id", "name", "code", "state_id")
+        districts = District.objects.filter(state__code="GJ").values("id", "name", "code", "state_id")
         return Response(list(districts))

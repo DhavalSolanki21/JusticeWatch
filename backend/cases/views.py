@@ -95,7 +95,7 @@ class AllCasesListView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter]
     filterset_class = CaseFilter
     search_fields = ["case_number", "fir_number", "applicable_sections"]
-    queryset = Case.objects.all().order_by("-filed_date")
+    queryset = Case.objects.filter(district__state__code="GJ").order_by("-filed_date")
 
 
 class MyCaseHistoryView(generics.ListAPIView):

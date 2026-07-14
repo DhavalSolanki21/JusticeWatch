@@ -15,7 +15,7 @@ class DistrictsTests(APITestCase):
         )
         self.summary = DistrictSummary.objects.create(
             district=self.district,
-            pending_count=5,
+            pending_count=2,
             disposed_count=10,
             disposal_rate=66.7,
             avg_case_age_days=180.5,

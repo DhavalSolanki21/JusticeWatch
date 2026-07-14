@@ -117,16 +117,31 @@ def run_ingestion(sample_size=1000):
         state_obj, _ = State.objects.get_or_create(
             name="Gujarat", defaults={"code": "GJ"}
         )
-        dist_name = (
-            row["district_name"]
-            if pd.notna(row["district_name"])
-            else f"District {row['dist_code']}"
-        )
+        guja_dist_map = {
+            11: "Gandhinagar", 12: "The Dangs", 13: "Ahmedabad", 14: "Surat", 
+            15: "Mehsana", 16: "Rajkot", 17: "Amreli", 18: "Anand", 
+            19: "Banaskantha", 20: "Bharuch", 21: "Bhavnagar", 22: "Dahod", 
+            23: "Jamnagar", 24: "Junagadh", 25: "Kheda", 26: "Kutch", 
+            27: "Panchmahal", 28: "Patan", 29: "Sabarkantha", 30: "Surendranagar", 
+            31: "Vadodara", 32: "Navsari", 33: "Narmada", 34: "Tapi", 
+            35: "Valsad", 36: "Porbandar", 37: "Gir Somnath", 38: "Aravalli", 
+            39: "Morbi", 40: "Devbhumi Dwarka", 41: "Chhota Udepur", 
+            42: "Mahisagar", 43: "Botad"
+        }
+        dist_code_val = int(row["dist_code"]) if pd.notna(row["dist_code"]) else None
+        if dist_code_val in guja_dist_map:
+            dist_name = guja_dist_map[dist_code_val]
+        else:
+            dist_name = (
+                row["district_name"]
+                if pd.notna(row["district_name"])
+                else f"District {row['dist_code']}"
+            )
         district_obj, _ = District.objects.get_or_create(
             name=dist_name,
             defaults={
                 "state": state_obj,
-                "code": str(row["dist_code"])[:10],
+                "code": f"GJ-{row['dist_code']}" if pd.notna(row['dist_code']) else "GJ-UNKNOWN",
                 "population": 1000000,
             },
         )
