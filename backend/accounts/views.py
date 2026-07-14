@@ -70,3 +70,21 @@ class JudgeCaseHistoryView(APIView):
         cases = Case.objects.filter(judge=request.user).order_by("-filed_date")
         serializer = CaseListSerializer(cases, many=True)
         return Response(serializer.data)
+
+
+class VerifiedLawyerListView(generics.ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = UserProfileSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return User.objects.filter(role="lawyer", is_verified=True).order_by("full_name")
+
+
+class VerifiedJudgeListView(generics.ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = UserProfileSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return User.objects.filter(role="judge", is_verified=True).order_by("full_name")

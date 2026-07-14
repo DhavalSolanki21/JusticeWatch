@@ -37,22 +37,67 @@ const CaseDetail = () => {
   const [judgeCaseStatus, setJudgeCaseStatus] = useState('Pending');
   const [loggingHearing, setLoggingHearing] = useState(false);
 
+  const [verifiedLawyers, setVerifiedLawyers] = useState([]);
+  const [verifiedJudges, setVerifiedJudges] = useState([]);
+  const [selectedLawyerId, setSelectedLawyerId] = useState('');
+  const [representingSide, setRepresentingSide] = useState('Petitioner');
+  const [selectedJudgeId, setSelectedJudgeId] = useState('');
+  const [isAssigningJudge, setIsAssigningJudge] = useState(false);
+  const [isAssigningLawyer, setIsAssigningLawyer] = useState(false);
+
+  useEffect(() => {
+    const fetchAssignmentsLists = async () => {
+      if (user?.role === 'judge') {
+        try {
+          const [lawyersRes, judgesRes] = await Promise.all([
+            api.get('/auth/lawyers/'),
+            api.get('/auth/judges/')
+          ]);
+          setVerifiedLawyers(lawyersRes.data.results || lawyersRes.data);
+          setVerifiedJudges(judgesRes.data.results || judgesRes.data);
+        } catch (err) {
+          console.error("Failed to load active lawyers/judges", err);
+        }
+      }
+    };
+    fetchAssignmentsLists();
+  }, [user]);
+
   useEffect(() => {
     const fetchCaseData = async () => {
       try {
-        const [caseRes, diffRes, hearingRes] = await Promise.all([
-        api.get(`/cases/${id}/`),
-        api.get(`/cases/${id}/predict/`),
-        api.get(`/timeline/?case=${id}`)]
-        );
+        // Try unscoped endpoint first so judges can view any district's case
+        let caseRes;
+        try {
+          caseRes = await api.get(`/cases/${id}/`);
+        } catch {
+          caseRes = await api.get(`/cases/all/?id=${id}`);
+          if (caseRes.data?.results?.length) {
+            caseRes = { data: caseRes.data.results[0] };
+          }
+        }
 
         setCaseItem(caseRes.data);
-        setPrediction(diffRes.data);
-        setHearings(hearingRes.data.results || hearingRes.data);
-
         setEditChargesheet(caseRes.data.chargesheet_status);
         setEditNotes(caseRes.data.case_notes || '');
         setJudgeCaseStatus(caseRes.data.case_status);
+
+        // Fetch prediction separately — non-blocking
+        try {
+          const diffRes = await api.get(`/cases/${id}/predict/`);
+          setPrediction(diffRes.data);
+        } catch (predErr) {
+          console.warn('Prediction unavailable for this case:', predErr);
+        }
+
+        // Fetch hearings separately — non-blocking
+        try {
+          const hearingRes = await api.get(`/timeline/?case=${id}`);
+          setHearings(hearingRes.data.results || hearingRes.data);
+        } catch (hearingErr) {
+          console.warn('Hearings unavailable for this case:', hearingErr);
+        }
+
       } catch (err) {
         console.error('Failed to load case details:', err);
       } finally {
@@ -141,6 +186,62 @@ const CaseDetail = () => {
     }
   };
 
+  const handleAssignJudge = async (e) => {
+    e.preventDefault();
+    if (!selectedJudgeId) return;
+    setIsAssigningJudge(true);
+    try {
+      const res = await api.patch(`/cases/${id}/`, {
+        judge: parseInt(selectedJudgeId)
+      });
+      setCaseItem(res.data);
+      alert('Presiding Justice assigned successfully!');
+    } catch (err) {
+      console.error("Failed to assign judge", err);
+      alert("Failed to assign Presiding Justice.");
+    } finally {
+      setIsAssigningJudge(false);
+    }
+  };
+
+  const handleAssignLawyer = async (e) => {
+    e.preventDefault();
+    const targetLawyerId = isJudge ? selectedLawyerId : user.id;
+    if (!targetLawyerId) return;
+    
+    setIsAssigningLawyer(true);
+    try {
+      await api.post(`/cases/${id}/assign_lawyer/`, {
+        lawyer_id: parseInt(targetLawyerId),
+        representing: representingSide
+      });
+      const caseRes = await api.get(`/cases/${id}/`);
+      setCaseItem(caseRes.data);
+      setSelectedLawyerId('');
+      alert('Advocate Litigator assigned successfully!');
+    } catch (err) {
+      console.error("Failed to assign lawyer", err);
+      alert("Failed to assign Advocate Litigator.");
+    } finally {
+      setIsAssigningLawyer(false);
+    }
+  };
+
+  const handleUnassignLawyer = async (assignmentId) => {
+    if (!window.confirm("Are you sure you want to unassign this litigator?")) return;
+    try {
+      await api.post(`/cases/${id}/unassign_lawyer/`, {
+        assignment_id: assignmentId
+      });
+      const caseRes = await api.get(`/cases/${id}/`);
+      setCaseItem(caseRes.data);
+      alert('Advocate Litigator unassigned successfully!');
+    } catch (err) {
+      console.error("Failed to unassign lawyer", err);
+      alert("Failed to unassign Advocate Litigator.");
+    }
+  };
+
   if (loading) {
     return <div className="main-content"><div className="spinner" style={{ margin: 'auto' }} /></div>;
   }
@@ -153,9 +254,11 @@ const CaseDetail = () => {
 
   }
 
-  // Check if current user is an assigned lawyer who can edit
   const isAssignedLawyer = user?.role === 'lawyer' &&
-  caseItem.assigned_lawyers.some((l) => l.full_name.includes(user.full_name.split(' ').slice(-1)[0]) || l.lawyer === user.id);
+  caseItem.assigned_lawyers &&
+  caseItem.assigned_lawyers.some((l) => l.lawyer === user.id);
+  const isJudge = user?.role === 'judge';
+  const canEdit = isJudge || isAssignedLawyer;
 
   return (
     <div className="main-content">
@@ -186,7 +289,7 @@ const CaseDetail = () => {
             </div>
           </div>
           
-          {!isEditing &&
+          {canEdit && !isEditing &&
           <button className="btn btn-outline btn-sm" onClick={() => setIsEditing(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
@@ -212,7 +315,28 @@ const CaseDetail = () => {
                 </div>
                 <div className="case-info-item">
                   <span className="case-info-label">Presiding Justice</span>
-                  <span className="case-info-value">{caseItem.judge_name || 'Unassigned'}</span>
+                  <span className="case-info-value">
+                    {caseItem.judge_name || 'Unassigned'}
+                    {isJudge && (
+                      <form onSubmit={handleAssignJudge} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <select 
+                          className="form-control" 
+                          style={{ padding: '0.25rem', fontSize: '0.75rem', height: '32px', minWidth: '150px' }}
+                          value={selectedJudgeId}
+                          onChange={(e) => setSelectedJudgeId(e.target.value)}
+                          required
+                        >
+                          <option value="">Assign Judge...</option>
+                          {verifiedJudges.map(j => (
+                            <option key={j.id} value={j.id}>{j.full_name}</option>
+                          ))}
+                        </select>
+                        <button type="submit" className="btn btn-primary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.7rem', height: '32px' }} disabled={isAssigningJudge}>
+                          {isAssigningJudge ? '...' : 'Assign'}
+                        </button>
+                      </form>
+                    )}
+                  </span>
                 </div>
                 <div className="case-info-item">
                   <span className="case-info-label">Statutory Case Category</span>
@@ -413,27 +537,95 @@ const CaseDetail = () => {
                 </form>
               </div>
             )}
-
             {/* Assigned Litigators */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <h2 className="jw-card-title">Assigned Litigators</h2>
               </div>
-              {caseItem.assigned_lawyers.length === 0 ?
-              <div className="text-muted" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>No litigators assigned.</div> :
+              {(caseItem.assigned_lawyers || []).length === 0 ?
+              <div className="text-muted" style={{ fontSize: '0.8rem', fontStyle: 'italic', marginBottom: '0.5rem' }}>No litigators assigned.</div> :
 
-              <div className="flex-col space-y-1">
-                  {caseItem.assigned_lawyers.map((l) =>
-                <div key={l.id} className="lawyer-card">
+              <div className="flex-col space-y-1" style={{ marginBottom: '0.5rem' }}>
+                {(caseItem.assigned_lawyers || []).map((l) => {
+                  const canRemove = isJudge || (user?.role === 'lawyer' && l.lawyer === user.id);
+                  return (
+                    <div key={l.id} className="lawyer-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div className="lawyer-card-name">{l.full_name}</div>
-                        <div className="lawyer-card-bar">System ID: {l.lawyer}</div>
+                        <div className="lawyer-card-bar">System ID: {l.lawyer} ({l.representing})</div>
                       </div>
-                      <div className="lawyer-card-role">{l.representing}</div>
+                      {canRemove && (
+                        <button 
+                          className="btn-link" 
+                          style={{ color: 'var(--severity-critical)', fontSize: '0.7rem', border: 'none', cursor: 'pointer', background: 'none' }}
+                          onClick={() => handleUnassignLawyer(l.id)}
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
-                )}
-                </div>
+                  );
+                })}
+              </div>
               }
+
+              {/* Judge Form: Assign Any Lawyer */}
+              {isJudge && (
+                <form onSubmit={handleAssignLawyer} style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Assign New Advocate</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <select 
+                      className="form-control" 
+                      style={{ padding: '0.25rem', fontSize: '0.75rem', height: '32px' }}
+                      value={selectedLawyerId} 
+                      onChange={(e) => setSelectedLawyerId(e.target.value)}
+                      required
+                    >
+                      <option value="">Choose Lawyer...</option>
+                      {verifiedLawyers.map(lawyer => (
+                        <option key={lawyer.id} value={lawyer.id}>{lawyer.full_name}</option>
+                      ))}
+                    </select>
+                    <select 
+                      className="form-control" 
+                      style={{ padding: '0.25rem', fontSize: '0.75rem', height: '32px' }}
+                      value={representingSide} 
+                      onChange={(e) => setRepresentingSide(e.target.value)}
+                      required
+                    >
+                      <option value="Petitioner">Petitioner</option>
+                      <option value="Respondent">Respondent</option>
+                      <option value="Third Party">Third Party</option>
+                    </select>
+                  </div>
+                  <button type="submit" className="btn btn-primary w-full btn-sm" style={{ height: '32px', fontSize: '0.75rem' }} disabled={isAssigningLawyer}>
+                    {isAssigningLawyer ? 'Assigning...' : 'Assign Advocate'}
+                  </button>
+                </form>
+              )}
+
+              {/* Lawyer Form: Self-Assign representation */}
+              {user?.role === 'lawyer' && !isAssignedLawyer && (
+                <form onSubmit={handleAssignLawyer} style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Represent a Party</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <select 
+                      className="form-control" 
+                      value={representingSide} 
+                      onChange={(e) => setRepresentingSide(e.target.value)}
+                      required
+                      style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem', height: '32px' }}
+                    >
+                      <option value="Petitioner">Petitioner</option>
+                      <option value="Respondent">Respondent</option>
+                      <option value="Third Party">Third Party</option>
+                    </select>
+                    <button type="submit" className="btn btn-primary btn-sm" style={{ height: '32px', fontSize: '0.75rem', padding: '0 1rem' }} disabled={isAssigningLawyer}>
+                      {isAssigningLawyer ? '...' : 'Represent'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             {/* Case Notes Editor */}

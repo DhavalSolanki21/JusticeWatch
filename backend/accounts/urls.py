@@ -7,6 +7,8 @@ from .views import (
     PendingLawyerListView,
     ApproveLawyerView,
     JudgeCaseHistoryView,
+    VerifiedLawyerListView,
+    VerifiedJudgeListView,
 )
 
 urlpatterns = [
@@ -19,4 +21,6 @@ urlpatterns = [
         "approve-lawyer/<int:pk>/", ApproveLawyerView.as_view(), name="approve_lawyer"
     ),
     path("judge-history/", JudgeCaseHistoryView.as_view(), name="judge_history"),
+    path("lawyers/", VerifiedLawyerListView.as_view(), name="verified_lawyers"),
+    path("judges/", VerifiedJudgeListView.as_view(), name="verified_judges"),
 ]

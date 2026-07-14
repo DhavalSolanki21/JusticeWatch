@@ -13,7 +13,7 @@ class LawyerAssignmentSerializer(serializers.ModelSerializer):
 
 class CaseDetailSerializer(serializers.ModelSerializer):
     district_name = serializers.CharField(source="district.name", read_only=True)
-    judge_name = serializers.CharField(source="judge.full_name", read_only=True)
+    judge_name = serializers.CharField(source="judge.full_name", read_only=True, allow_null=True, default=None)
     assigned_lawyers = LawyerAssignmentSerializer(
         source="caseassignment_set", many=True, read_only=True
     )

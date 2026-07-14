@@ -375,40 +375,6 @@ def train_models(df=None):
     )
 
     # ---------------------------------------------------------
-    # 3. Keras/TensorFlow Feedforward Neural Network
-    # ---------------------------------------------------------
-    print("\n--- Training Model 3: TensorFlow/Keras Neural Network ---")
-    import tensorflow as tf
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense, Dropout
-
-    scaler_nn = StandardScaler()
-    X_train_nn = scaler_nn.fit_transform(X_train_c)
-    X_test_nn = scaler_nn.transform(X_test_c)
-
-    nn_model = Sequential(
-        [
-            Dense(64, activation="relu", input_shape=(X_train_nn.shape[1],)),
-            Dropout(0.2),
-            Dense(32, activation="relu"),
-            Dense(num_classes, activation="softmax"),
-        ]
-    )
-
-    nn_model.compile(
-        optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"]
-    )
-    nn_model.fit(X_train_nn, y_train_c, epochs=10, batch_size=64, verbose=0)
-
-    y_pred_nn_probs = nn_model.predict(X_test_nn)
-    y_pred_nn = np.argmax(y_pred_nn_probs, axis=1)
-    acc_nn = accuracy_score(y_test_c, y_pred_nn)
-    nn_sens, nn_spec = calculate_multiclass_metrics(y_test_c, y_pred_nn, num_classes)
-    print(
-        f"Neural Network -> Accuracy: {acc_nn:.4f}, Macro Sensitivity: {nn_sens:.4f}, Macro Specificity: {nn_spec:.4f}"
-    )
-
-    # ---------------------------------------------------------
     # 4. Fairness/Bias Audit Check
     # ---------------------------------------------------------
     print("\n--- Fairness/Bias Audit (Gender Features) ---")
@@ -460,8 +426,6 @@ def train_models(df=None):
     with open(os.path.join(artifacts_dir, "encoders.pkl"), "wb") as f:
         pickle.dump(encoders, f)
 
-    # Save Neural Network
-    nn_model.save(os.path.join(artifacts_dir, "disposal_nn_model.keras"))
 
     print(f"Models and encoders saved to {artifacts_dir}/")
 
@@ -483,7 +447,6 @@ def train_models(df=None):
 | Random Forest | {acc_rf:.4f} | {rf_sens:.4f} | {rf_spec:.4f} |
 | Decision Tree | {acc_dt:.4f} | {dt_sens:.4f} | {dt_spec:.4f} |
 | K-Nearest Neighbors | {acc_knn:.4f} | {knn_sens:.4f} | {knn_spec:.4f} |
-| Feedforward Neural Network | {acc_nn:.4f} | {nn_sens:.4f} | {nn_spec:.4f} |
 
 ## 3. Fairness and Bias Audit (Gender)
 *(Corrected after data leakage/binning audit)*

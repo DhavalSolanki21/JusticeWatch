@@ -84,6 +84,58 @@ class CaseViewSet(viewsets.ModelViewSet):
 
         return Response(predictions)
 
+    @action(detail=True, methods=["post"])
+    def assign_lawyer(self, request, pk=None):
+        case = self.get_object()
+        lawyer_id = request.data.get("lawyer_id")
+        representing = request.data.get("representing", "Petitioner")
+
+        if not lawyer_id:
+            return Response({"error": "lawyer_id is required"}, status=400)
+
+        # Non-judges can only assign themselves to represent a party
+        if request.user.role != "judge" and request.user.id != int(lawyer_id):
+            return Response({"error": "You can only assign yourself to a case"}, status=403)
+
+        from accounts.models import User
+        try:
+            lawyer = User.objects.get(id=lawyer_id, role="lawyer", is_verified=True)
+        except User.DoesNotExist:
+            return Response({"error": "Verified lawyer not found"}, status=404)
+
+        from .models import CaseAssignment
+        assignment, created = CaseAssignment.objects.get_or_create(
+            case=case,
+            lawyer=lawyer,
+            defaults={"representing": representing}
+        )
+        if not created:
+            assignment.representing = representing
+            assignment.save()
+
+        return Response({"status": "Lawyer assigned successfully"})
+
+    @action(detail=True, methods=["post"])
+    def unassign_lawyer(self, request, pk=None):
+        case = self.get_object()
+        assignment_id = request.data.get("assignment_id")
+
+        if not assignment_id:
+            return Response({"error": "assignment_id is required"}, status=400)
+
+        from .models import CaseAssignment
+        try:
+            assignment = CaseAssignment.objects.get(id=assignment_id, case=case)
+            
+            # Non-judges can only unassign themselves
+            if request.user.role != "judge" and assignment.lawyer != request.user:
+                return Response({"error": "You can only unassign yourself"}, status=403)
+                
+            assignment.delete()
+            return Response({"status": "Lawyer unassigned successfully"})
+        except CaseAssignment.DoesNotExist:
+            return Response({"error": "Assignment not found"}, status=404)
+
 
 from rest_framework import generics
 from accounts.permissions import IsVerifiedUser

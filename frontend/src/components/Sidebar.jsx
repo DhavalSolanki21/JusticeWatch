@@ -80,6 +80,14 @@ const BrainIcon = () =>
   </svg>;
 
 
+const HistoryIcon = () =>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M12 7v5l4 2" />
+  </svg>;
+
+
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -117,6 +125,10 @@ const Sidebar = () => {
               <ChartIcon />
               <span>Court Analytics</span>
             </NavLink>
+            <NavLink to="/my-history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <HistoryIcon />
+              <span>My Handled Cases</span>
+            </NavLink>
             <NavLink to="/approvals" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <UserCheckIcon />
               <span>Lawyer Approvals</span>
@@ -139,6 +151,10 @@ const Sidebar = () => {
             <NavLink to="/all-cases" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <FolderOpenIcon />
               <span>All Cases</span>
+            </NavLink>
+            <NavLink to="/my-history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <HistoryIcon />
+              <span>My Case History</span>
             </NavLink>
           </>
         }

@@ -27,6 +27,7 @@ const CaseSearch = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const isLawyer = user?.role === 'lawyer';
 
   // Parse initial district from URL query params (e.g. from DistrictModal "Audit Cases")
   const queryParams = new URLSearchParams(location.search);
@@ -57,7 +58,8 @@ const CaseSearch = () => {
       if (status) params.case_status = status;
       if (district) params.district__name = district; // Assumes backend supports this filter
 
-      const res = await api.get('/cases/', { params });
+      const endpoint = isLawyer ? '/cases/' : '/cases/all/';
+      const res = await api.get(endpoint, { params });
 
       // DRF PageNumberPagination returns { count, next, previous, results }
       if (res.data.results) {
@@ -76,7 +78,7 @@ const CaseSearch = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, category, status, district]);
+  }, [page, search, category, status, district, isLawyer]);
 
   useEffect(() => {
     fetchCases();
@@ -88,9 +90,6 @@ const CaseSearch = () => {
     fetchCases();
   };
 
-
-
-  const isLawyer = user?.role === 'lawyer';
 
   return (
     <div className="main-content">

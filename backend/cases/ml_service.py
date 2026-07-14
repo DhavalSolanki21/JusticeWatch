@@ -19,12 +19,6 @@ DT_MODEL_PATH = os.path.join(
 KNN_MODEL_PATH = os.path.join(
     settings.BASE_DIR, "ml_pipeline", "artifacts", "disposal_classifier_knn.pkl"
 )
-NN_MODEL_PATH = os.path.join(
-    settings.BASE_DIR, "ml_pipeline", "artifacts", "disposal_nn_model.keras"
-)
-NN_SCALER_PATH = os.path.join(
-    settings.BASE_DIR, "ml_pipeline", "artifacts", "nn_scaler.pkl"
-)
 ENCODERS_PATH = os.path.join(
     settings.BASE_DIR, "ml_pipeline", "artifacts", "encoders.pkl"
 )
@@ -45,14 +39,12 @@ _rf_duration = None
 _rf_disposal = None
 _dt_disposal = None
 _knn_disposal = None
-_nn_disposal = None
-_nn_scaler = None
 _encoders = None
 
 
 # Force Django to auto-reload and clear memory cache for new models
 def load_models():
-    global _rf_duration, _rf_disposal, _dt_disposal, _knn_disposal, _nn_disposal, _nn_scaler, _encoders
+    global _rf_duration, _rf_disposal, _dt_disposal, _knn_disposal, _encoders
     if _rf_duration is None or _encoders is None:
         with open(DURATION_MODEL_PATH, "rb") as f:
             _rf_duration = pickle.load(f)
@@ -66,15 +58,6 @@ def load_models():
         except Exception as e:
             print(f"DT/KNN load error (ignoring if just missing): {e}")
 
-        try:
-            with open(NN_SCALER_PATH, "rb") as f:
-                _nn_scaler = pickle.load(f)
-            import tensorflow as tf
-
-            _nn_disposal = tf.keras.models.load_model(NN_MODEL_PATH)
-        except Exception as e:
-            print(f"NN load error (ignoring if just missing): {e}")
-
         with open(ENCODERS_PATH, "rb") as f:
             _encoders = pickle.load(f)
     return (
@@ -82,8 +65,6 @@ def load_models():
         _rf_disposal,
         _dt_disposal,
         _knn_disposal,
-        _nn_disposal,
-        _nn_scaler,
         _encoders,
     )
 
@@ -107,8 +88,6 @@ def predict_for_case(case=None, custom_data=None):
             rf_disposal,
             dt_disposal,
             knn_disposal,
-            nn_disposal,
-            nn_scaler,
             encoders,
         ) = load_models()
 
@@ -240,21 +219,13 @@ def predict_for_case(case=None, custom_data=None):
         model_comparison = []
 
         # Helper to extract name + confidence
-        def format_pred(model, name, use_scaler=False, is_nn=False):
+        def format_pred(model, name):
             if not model:
                 return None
             try:
-                if is_nn:
-                    X_input = nn_scaler.transform(df_clf) if nn_scaler else df_clf
-                    import numpy as np
-
-                    probs = model.predict(X_input, verbose=0)[0]
-                    c_idx = np.argmax(probs)
-                    c_conf = max(probs)
-                else:
-                    probs = model.predict_proba(df_clf)[0]
-                    c_idx = model.predict(df_clf)[0]
-                    c_conf = max(probs)
+                probs = model.predict_proba(df_clf)[0]
+                c_idx = model.predict(df_clf)[0]
+                c_conf = max(probs)
 
                 c_str = le_disp.inverse_transform([c_idx])[0] if le_disp else "resolved"
                 return {
@@ -275,9 +246,6 @@ def predict_for_case(case=None, custom_data=None):
         cmp_knn = format_pred(knn_disposal, "K-Nearest Neighbors")
         if cmp_knn:
             model_comparison.append(cmp_knn)
-        cmp_nn = format_pred(nn_disposal, "Neural Network (Keras)", is_nn=True)
-        if cmp_nn:
-            model_comparison.append(cmp_nn)
 
         # Feature Importance Factors (just heuristic rules based on input for UI explanation)
         risk_factors = []

@@ -17,6 +17,7 @@ import Profile from './pages/Profile';
 import ApprovalPanel from './pages/ApprovalPanel';
 import FileCase from './pages/FileCase';
 import AllCases from './pages/AllCases';
+import MyHistory from './pages/MyHistory';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -68,6 +69,7 @@ const App = () => {
           <Route path="/approvals" element={<ProtectedRoute requiredRole="judge"><ApprovalPanel /></ProtectedRoute>} />
           <Route path="/file-case" element={<ProtectedRoute requiredRole="lawyer"><FileCase /></ProtectedRoute>} />
           <Route path="/all-cases" element={<ProtectedRoute><AllCases /></ProtectedRoute>} />
+          <Route path="/my-history" element={<ProtectedRoute><MyHistory /></ProtectedRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
