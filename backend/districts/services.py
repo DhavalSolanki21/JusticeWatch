@@ -52,9 +52,9 @@ def compute_district_summaries():
         )
 
     # Now that we have all stats, we can calculate max values for normalization
-    summaries = DistrictSummary.objects.all()
-    max_pending = max([s.pending_count for s in summaries]) if summaries else 0
-    max_avg_age = max([s.avg_case_age_days for s in summaries]) if summaries else 0
+    summaries = DistrictSummary.objects.filter(district__state__code="GJ")
+    max_pending = max([s.pending_count for s in summaries]) if summaries.exists() else 0
+    max_avg_age = max([s.avg_case_age_days for s in summaries]) if summaries.exists() else 0
 
     # Avoid division by zero
     max_pending = max_pending if max_pending > 0 else 1
