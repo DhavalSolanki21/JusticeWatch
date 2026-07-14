@@ -38,17 +38,5 @@ build/
 Thumbs.db
 
 # Machine Learning Data and Artifacts
-# Option B: We commit generated model binaries using Git LFS
 backend/ml_pipeline/data/
-backend/ml_pipeline/artifacts/*.pkl
-backend/ml_pipeline/artifacts/*.keras
-backend/ml_pipeline/artifacts/*.h5
-
-# Keep specific models tracked for inference
-!backend/ml_pipeline/artifacts/duration_regressor.pkl
-!backend/ml_pipeline/artifacts/disposal_classifier_rf.pkl
-!backend/ml_pipeline/artifacts/disposal_classifier_dt.pkl
-!backend/ml_pipeline/artifacts/disposal_classifier_knn.pkl
-!backend/ml_pipeline/artifacts/disposal_nn_model.keras
-!backend/ml_pipeline/artifacts/nn_scaler.pkl
-!backend/ml_pipeline/artifacts/encoders.pkl
+backend/ml_pipeline/artifacts/
