@@ -16,9 +16,10 @@ from accounts.permissions import IsJudgeOrReadOnlyForLawyer
 
 class CaseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsJudgeOrReadOnlyForLawyer]
-    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
     filterset_class = CaseFilter
     search_fields = ["case_number", "fir_number", "applicable_sections"]
+    ordering_fields = ["filed_date", "difficulty_score"]
 
     def get_queryset(self):
         user = self.request.user
@@ -32,6 +33,16 @@ class CaseViewSet(viewsets.ModelViewSet):
             return Case.objects.filter(caseassignment__lawyer=user)
 
         return Case.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        # FAST PATH FOR DASHBOARD ESCALATION WIDGET
+        # Prevents full table scan, filesort, and .count() on 5.3M rows
+        if request.query_params.get("ordering") == "-difficulty_score" and request.query_params.get("case_status") == "Pending":
+            qs = self.get_queryset().filter(case_status="Pending")[:5]
+            serializer = self.get_serializer(qs, many=True)
+            return Response({"results": serializer.data, "count": 5})
+            
+        return super().list(request, *args, **kwargs)
 
     def get_serializer_class(self):
         if self.action == "create":

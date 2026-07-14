@@ -117,10 +117,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ======================== JUDGE VIEW ======================== */}
         {isJudge && overview &&
         <>
-            {/* Stats */}
             <div className="stat-grid">
               <StatCard
               label="Total Pending Cases"
@@ -147,7 +145,6 @@ const Dashboard = () => {
             
             </div>
 
-            {/* Combined Interactive Map & Heatmap Grid */}
             <div className="jw-card" style={{ marginBottom: '2rem' }}>
               <div className="jw-card-header">
                 <div>
@@ -213,7 +210,6 @@ const Dashboard = () => {
             }
             </div>
 
-            {/* Critical Escalation Watch */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <div>
@@ -270,10 +266,8 @@ const Dashboard = () => {
           </>
         }
 
-        {/* ======================== LAWYER VIEW ======================== */}
         {!isJudge &&
         <>
-            {/* Stats */}
             <div className="stat-grid">
               <StatCard label="Cases Assigned to Me" value={lawyerCaseCount} footer="Active Advocacy Records" valueClass="stat-value--accent" />
               <StatCard label="Pending Hearings" value={hearingsCount} footer="Required Court Appearances" />
@@ -281,7 +275,6 @@ const Dashboard = () => {
               <StatCard label="Pending Chargesheets" value={pendingChargesheet} footer="Required Procedural Actions" valueClass="stat-value--danger" />
             </div>
 
-            {/* Static District Grid (Read-Only for Lawyers) */}
             <div className="jw-card" style={{ marginBottom: '2rem' }}>
               <div className="jw-card-header">
                 <div>
@@ -297,7 +290,6 @@ const Dashboard = () => {
               <StateMap stateCode="GJ" districts={districts} />
             </div>
 
-            {/* My Cases Table */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <div>
@@ -355,7 +347,6 @@ const Dashboard = () => {
         }
       </div>
 
-      {/* District Detail Modal Overlay */}
       {selectedDistrict &&
       <DistrictDetailModal
         district={selectedDistrict}
