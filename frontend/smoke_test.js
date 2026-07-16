@@ -14,15 +14,12 @@ const CASES = [
   const page = await browser.newPage();
   const results = [];
 
-  // Wait a few seconds to ensure Vite and Django are fully up
   await new Promise(r => setTimeout(r, 3000));
 
-  // Perform Login
   await page.goto(`${BASE}/login`);
   await page.fill('#login-username', 'testuser');
   await page.fill('#login-password', 'password123');
   await page.click('#login-submit-btn');
-  // Wait for login to complete (navigates to /dashboard)
   await page.waitForURL('**/dashboard', { timeout: 10000 });
   const token = await page.evaluate(() => localStorage.getItem('access_token'));
   console.log("Token after login:", token ? "Present" : "Missing");
@@ -30,9 +27,7 @@ const CASES = [
   for (const c of CASES) {
     await page.goto(`${BASE}/predictions`);
     await page.waitForTimeout(1000);
-    // Click Interactive Predictor tab
     await page.click('text=Interactive Predictor');
-    // Ensure Custom Scenario is selected
     await page.click('text=Custom Scenario');
     
     for (const [field, value] of Object.entries(c)) {
@@ -49,7 +44,6 @@ const CASES = [
     const duration = await page.textContent('[data-testid="duration-days"]');
     const disposal = await page.textContent('[data-testid="disposal-outcome"]');
     
-    // Check model comparison rows
     const rows = await page.locator('[data-testid="model-comparison-row"]').all();
     const modelPredictions = [];
     for (const row of rows) {
@@ -69,7 +63,6 @@ const CASES = [
 
   await browser.close();
 
-  // Sanity checks — flag anything suspicious
   const durations = results.map(r => r.duration);
   const disposals = results.map(r => r.disposal);
   

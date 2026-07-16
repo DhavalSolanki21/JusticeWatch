@@ -8,17 +8,14 @@ const ScaleIcon = () =>
     <path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h18" />
   </svg>;
 
-
 const ArrowRightIcon = () =>
 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
   </svg>;
 
-
 const Landing = () => {
   const navigate = useNavigate();
 
-  // Decorative heatmap: generate 33 cells with varied severities
   const cells = Array.from({ length: 33 }, (_, i) => {
     if (i === 4 || i === 9 || i === 18 || i === 29) return 'heatmap-cell--high';
     if (i === 6 || i === 14 || i === 25) return 'heatmap-cell--critical';
@@ -30,7 +27,6 @@ const Landing = () => {
     <div className="auth-page" style={{ justifyContent: 'space-between' }}>
       <div className="auth-bg-grid" />
 
-      {/* Top Bar */}
       <header className="landing-topbar">
         <div className="landing-brand">
           <ScaleIcon />
@@ -46,7 +42,6 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* Hero */}
       <main className="landing-hero animate-fadeInUp">
         <h1>
           Case analytics and monitoring for{' '}
@@ -63,7 +58,6 @@ const Landing = () => {
         </button>
         <p className="landing-cta-help">Secure portal for verified legal staff</p>
 
-        {/* Decorative Heatmap */}
         <div className="landing-heatmap">
           <div className="landing-heatmap-label">
             State Pending Load Distribution
@@ -86,7 +80,6 @@ const Landing = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="landing-footer">
         <span>Gujarat District Courts — Judicial Administration System</span>
         <span>Session: UTC+5:30</span>

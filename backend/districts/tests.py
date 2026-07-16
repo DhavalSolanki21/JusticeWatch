@@ -5,10 +5,8 @@ from accounts.models import User
 from districts.models import District, State, DistrictSummary
 from cases.models import Case
 
-
 class DistrictsTests(APITestCase):
     def setUp(self):
-        # Setup state, district, district summary
         self.state = State.objects.create(name="Gujarat", code="GJ")
         self.district = District.objects.create(
             state=self.state, name="Ahmedabad", code="AHM", population=1000000
@@ -22,7 +20,6 @@ class DistrictsTests(APITestCase):
             severity_tier="medium",
         )
 
-        # Setup users
         self.judge = User.objects.create_user(
             username="judge1",
             email="judge1@justicewatch.com",
@@ -41,7 +38,6 @@ class DistrictsTests(APITestCase):
             is_verified=True,
         )
 
-        # Setup mock cases for breakdown
         self.case1 = Case.objects.create(
             case_number="CIV/2026/XYZ123",
             district=self.district,
@@ -98,12 +94,10 @@ class DistrictsTests(APITestCase):
         """Only judges can access district breakdown."""
         breakdown_url = reverse("district-breakdown", args=[self.district.id])
 
-        # 1. Lawyer is forbidden
         self.client.force_authenticate(user=self.lawyer)
         response = self.client.get(breakdown_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # 2. Judge succeeds
         self.client.force_authenticate(user=self.judge)
         response = self.client.get(breakdown_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

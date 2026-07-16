@@ -1,18 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
-
-
-
-
-
-
-
-
-
-
-
-
 const AuthContext = createContext(undefined);
 
 export const AuthProvider = ({ children }) => {
@@ -55,7 +43,6 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (err) {
       console.error("Login failed:", err);
-      // Retrieve the backend error message if available
       const errMsg = err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || "Invalid username or password.";
       setError(errMsg);
       setLoading(false);
@@ -93,7 +80,6 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>);
 
 };
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

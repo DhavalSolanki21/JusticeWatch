@@ -1,6 +1,5 @@
 from rest_framework import permissions
 
-
 class IsJudge(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(
@@ -10,7 +9,6 @@ class IsJudge(permissions.BasePermission):
             and request.user.is_verified
         )
 
-
 class IsLawyer(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(
@@ -19,7 +17,6 @@ class IsLawyer(permissions.BasePermission):
             and request.user.role == "lawyer"
             and request.user.is_verified
         )
-
 
 class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -45,11 +42,9 @@ class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
             return True
 
         if request.user.role == "lawyer":
-            # Check if this lawyer is assigned to this specific case.
             return obj.caseassignment_set.filter(lawyer=request.user).exists()
 
         return False
-
 
 class IsVerifiedUser(permissions.BasePermission):
     def has_permission(self, request, view):

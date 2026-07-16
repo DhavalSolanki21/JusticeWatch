@@ -5,7 +5,6 @@ from timeline.models import Hearing
 from districts.models import DistrictSummary
 from districts.services import compute_district_summaries
 
-
 class Command(BaseCommand):
     help = "Clears all demo data (cases, hearings, assignments, summaries) from the database"
 
@@ -13,27 +12,22 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING("Starting database cleanup..."))
 
         with transaction.atomic():
-            # Delete case assignments
             assignments_count = CaseAssignment.objects.count()
             CaseAssignment.objects.all().delete()
             self.stdout.write(f"Deleted {assignments_count} case assignments.")
 
-            # Delete hearings
             hearings_count = Hearing.objects.count()
             Hearing.objects.all().delete()
             self.stdout.write(f"Deleted {hearings_count} hearings.")
 
-            # Delete cases
             cases_count = Case.objects.count()
             Case.objects.all().delete()
             self.stdout.write(f"Deleted {cases_count} cases.")
 
-            # Delete district summaries
             summaries_count = DistrictSummary.objects.count()
             DistrictSummary.objects.all().delete()
             self.stdout.write(f"Deleted {summaries_count} district summaries.")
 
-            # Recompute summaries (will reset them to 0/empty or delete them)
             self.stdout.write("Resetting district summaries...")
             compute_district_summaries()
 

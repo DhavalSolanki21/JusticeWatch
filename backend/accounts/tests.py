@@ -4,16 +4,13 @@ from rest_framework.test import APITestCase
 from accounts.models import User
 from districts.models import District, State
 
-
 class AccountsTests(APITestCase):
     def setUp(self):
-        # Create a mock State and District first
         self.state = State.objects.create(name="Gujarat", code="GJ")
         self.district = District.objects.create(
             state=self.state, name="Ahmedabad", code="AHM", population=1000000
         )
 
-        # Create a judge user (already verified)
         self.judge = User.objects.create_user(
             username="judge1",
             email="judge1@justicewatch.com",
@@ -24,7 +21,6 @@ class AccountsTests(APITestCase):
             district_scope=self.district,
         )
 
-        # Create an unverified lawyer
         self.lawyer_unverified = User.objects.create_user(
             username="lawyer1",
             email="lawyer1@justicewatch.com",
@@ -44,7 +40,6 @@ class AccountsTests(APITestCase):
         )
         self.assertTrue(superuser.is_superuser)
         self.assertTrue(superuser.is_staff)
-        # Verify that we can log in with superuser
         response = self.client.post(
             reverse("login"),
             {"username": "admin_user", "password": "SuperPassword@123"},
@@ -55,7 +50,6 @@ class AccountsTests(APITestCase):
 
     def test_registration_valid_and_invalid(self):
         """Systematically test all application forms with valid and invalid data inputs."""
-        # 1. Valid registration
         register_url = reverse("register")
         valid_data = {
             "username": "new_lawyer",
@@ -70,16 +64,13 @@ class AccountsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["username"], "new_lawyer")
 
-        # Verify registered user is unverified by default
         new_user = User.objects.get(username="new_lawyer")
         self.assertFalse(new_user.is_verified)
 
-        # 2. Invalid registration - username already exists
         response = self.client.post(register_url, valid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("username", response.data)
 
-        # 3. Invalid registration - invalid email
         invalid_data = valid_data.copy()
         invalid_data["username"] = "another_lawyer"
         invalid_data["email"] = "not-an-email"
@@ -87,7 +78,6 @@ class AccountsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("email", response.data)
 
-        # 4. Invalid registration - weak password
         invalid_data = valid_data.copy()
         invalid_data["username"] = "weak_pwd_user"
         invalid_data["email"] = "weak@example.com"
@@ -121,11 +111,9 @@ class AccountsTests(APITestCase):
         """Only judges can approve lawyers."""
         approve_url = reverse("approve_lawyer", args=[self.lawyer_unverified.id])
 
-        # 1. Anonymous user fails
         response = self.client.post(approve_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        # 2. Lawyer user fails because they don't have IsJudge permission
         self.lawyer_unverified.is_verified = True
         self.lawyer_unverified.save()
         self.client.force_authenticate(user=self.lawyer_unverified)
@@ -133,11 +121,9 @@ class AccountsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.client.force_authenticate(user=None)
 
-        # Revert lawyer to unverified
         self.lawyer_unverified.is_verified = False
         self.lawyer_unverified.save()
 
-        # 3. Judge user succeeds
         self.client.force_authenticate(user=self.judge)
         response = self.client.post(approve_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -148,12 +134,10 @@ class AccountsTests(APITestCase):
         self.client.force_authenticate(user=self.judge)
         profile_url = reverse("user_profile")
 
-        # Get profile
         response = self.client.get(profile_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["username"], "judge1")
 
-        # Update profile
         update_data = {
             "display_name": "Justice AHM",
             "email": "justice_ahm@justicewatch.com",
@@ -165,6 +149,5 @@ class AccountsTests(APITestCase):
             User.objects.get(id=self.judge.id).email, "justice_ahm@justicewatch.com"
         )
 
-        # Invalid email update
         response = self.client.put(profile_url, {"email": "invalid-email"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

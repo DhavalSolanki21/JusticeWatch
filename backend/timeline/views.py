@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from .models import Hearing
 from .serializers import HearingSerializer
 
-
 class HearingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = HearingSerializer
@@ -34,7 +33,6 @@ class HearingViewSet(viewsets.ModelViewSet):
         serializer.save(logged_by=self.request.user)
 
     def create(self, request, *args, **kwargs):
-        # Validate that the user has permission to log a hearing for this case
         case_id = request.data.get("case")
         if not case_id:
             return Response(
@@ -44,7 +42,6 @@ class HearingViewSet(viewsets.ModelViewSet):
 
         user = request.user
         if user.role == "lawyer":
-            # Lawyer must be assigned to this case to create a hearing for it
             from cases.models import CaseAssignment
 
             is_assigned = CaseAssignment.objects.filter(
@@ -58,7 +55,6 @@ class HearingViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
         elif user.role == "judge":
-            # Judge must be in district scope if defined
             if user.district_scope:
                 from cases.models import Case
 

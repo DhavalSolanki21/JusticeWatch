@@ -13,7 +13,6 @@ from .serializers import (
 from .filters import CaseFilter
 from accounts.permissions import IsJudgeOrReadOnlyForLawyer
 
-
 class CaseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsJudgeOrReadOnlyForLawyer]
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
@@ -35,8 +34,6 @@ class CaseViewSet(viewsets.ModelViewSet):
         return Case.objects.none()
 
     def list(self, request, *args, **kwargs):
-        # FAST PATH FOR DASHBOARD ESCALATION WIDGET
-        # Prevents full table scan, filesort, and .count() on 5.3M rows
         if request.query_params.get("ordering") == "-difficulty_score" and request.query_params.get("case_status") == "Pending":
             qs = self.get_queryset().filter(case_status="Pending")[:5]
             serializer = self.get_serializer(qs, many=True)
@@ -76,8 +73,6 @@ class CaseViewSet(viewsets.ModelViewSet):
         predictions = predict_for_case(case)
 
         if "error" not in predictions:
-            # We can optionally save the duration_risk as the case difficulty tier
-            # if we want to cache it, but let's just return it for now.
             if case.difficulty_tier != predictions["duration_risk"]:
                 case.difficulty_tier = predictions["duration_risk"]
                 case.save(update_fields=["difficulty_tier"])
@@ -93,7 +88,6 @@ class CaseViewSet(viewsets.ModelViewSet):
         if not lawyer_id:
             return Response({"error": "lawyer_id is required"}, status=400)
 
-        # Non-judges can only assign themselves to represent a party
         if request.user.role != "judge" and request.user.id != int(lawyer_id):
             return Response({"error": "You can only assign yourself to a case"}, status=403)
 
@@ -127,7 +121,6 @@ class CaseViewSet(viewsets.ModelViewSet):
         try:
             assignment = CaseAssignment.objects.get(id=assignment_id, case=case)
             
-            # Non-judges can only unassign themselves
             if request.user.role != "judge" and assignment.lawyer != request.user:
                 return Response({"error": "You can only unassign yourself"}, status=403)
                 
@@ -136,10 +129,8 @@ class CaseViewSet(viewsets.ModelViewSet):
         except CaseAssignment.DoesNotExist:
             return Response({"error": "Assignment not found"}, status=404)
 
-
 from rest_framework import generics
 from accounts.permissions import IsVerifiedUser
-
 
 class AllCasesListView(generics.ListAPIView):
     permission_classes = [IsVerifiedUser]
@@ -148,7 +139,6 @@ class AllCasesListView(generics.ListAPIView):
     filterset_class = CaseFilter
     search_fields = ["case_number", "fir_number", "applicable_sections"]
     queryset = Case.objects.filter(district__state__code="GJ").order_by("-filed_date")
-
 
 class MyCaseHistoryView(generics.ListAPIView):
     permission_classes = [IsVerifiedUser]

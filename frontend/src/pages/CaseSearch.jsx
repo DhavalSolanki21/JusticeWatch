@@ -10,18 +10,15 @@ const SearchIcon = () =>
     <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
   </svg>;
 
-
 const FileTextIcon = () =>
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" />
   </svg>;
 
-
 const ChevronRight = () =>
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m9 18 6-6-6-6" />
   </svg>;
-
 
 const CaseSearch = () => {
   const navigate = useNavigate();
@@ -29,7 +26,6 @@ const CaseSearch = () => {
   const { user } = useAuth();
   const isLawyer = user?.role === 'lawyer';
 
-  // Parse initial district from URL query params (e.g. from DistrictModal "Audit Cases")
   const queryParams = new URLSearchParams(location.search);
   const initialDistrict = queryParams.get('district') || '';
 
@@ -37,13 +33,11 @@ const CaseSearch = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Filters
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
   const [district, setDistrict] = useState(initialDistrict);
 
-  // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -61,11 +55,9 @@ const CaseSearch = () => {
       const endpoint = isLawyer ? '/cases/' : '/cases/all/';
       const res = await api.get(endpoint, { params });
 
-      // DRF PageNumberPagination returns { count, next, previous, results }
       if (res.data.results) {
         setCases(res.data.results);
         setTotalCount(res.data.count);
-        // Assuming page_size is 10 (DRF default if not specified)
         setTotalPages(Math.ceil(res.data.count / 10));
       } else {
         setCases(res.data);
@@ -90,11 +82,9 @@ const CaseSearch = () => {
     fetchCases();
   };
 
-
   return (
     <div className="main-content">
       <div className="page-wrapper animate-fadeInUp">
-        {/* Header */}
         <div className="page-header">
           <div className="page-header-info">
             <h1>{isLawyer ? 'My Case Ledger' : 'Case Registry Search'}</h1>
@@ -104,7 +94,6 @@ const CaseSearch = () => {
           </div>
         </div>
 
-        {/* Filters */}
         {!isLawyer && (
           <div className="jw-card">
             <form onSubmit={handleSearch}>
@@ -163,7 +152,6 @@ const CaseSearch = () => {
           </div>
         )}
 
-        {/* Results */}
         {error &&
         <div className="notice notice-error mb-3">
             <span>{error}</span>
@@ -230,7 +218,6 @@ const CaseSearch = () => {
                 </table>
               </div>
 
-              {/* Pagination Controls */}
               {totalPages > 1 &&
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-main)' }}>
                   <button

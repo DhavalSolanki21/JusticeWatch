@@ -5,15 +5,6 @@ import React from 'react';
    No external chart libraries (Plotly is backend-only per syllabus)
    ================================================================ */
 
-/* ---- Horizontal Progress Bar ---- */
-
-
-
-
-
-
-
-
 export const ProgressBar = ({
   label, value, maxValue, color = 'var(--accent)', suffix = ''
 }) => {
@@ -36,18 +27,6 @@ export const ProgressBar = ({
 
 };
 
-/* ---- Vertical Bar Chart (inline SVG) ---- */
-
-
-
-
-
-
-
-
-
-
-
 export const BarChart = ({ items, height = 180 }) => {
   const maxVal = Math.max(...items.map((i) => i.value), 1);
   const barWidth = 40;
@@ -61,7 +40,6 @@ export const BarChart = ({ items, height = 180 }) => {
       viewBox={`0 0 ${chartWidth + yAxisWidth} ${height + labelHeight + 10}`}
       style={{ width: '100%', height: `${height + labelHeight + 20}px` }}>
       
-      {/* Grid lines */}
       {[0.25, 0.5, 0.75, 1].map((fraction) => {
         const y = height - fraction * height + 5;
         return (
@@ -74,10 +52,8 @@ export const BarChart = ({ items, height = 180 }) => {
             stroke="var(--border-main)"
             strokeDasharray="3" />);
 
-
       })}
 
-      {/* Bars */}
       {items.map((item, idx) => {
         const barHeight = item.value / maxVal * height;
         const x = yAxisWidth + gap + idx * (barWidth + gap);
@@ -120,18 +96,6 @@ export const BarChart = ({ items, height = 180 }) => {
     </svg>);
 
 };
-
-/* ---- Donut / Pie style via stacked horizontal bars ---- */
-
-
-
-
-
-
-
-
-
-
 
 export const DonutBars = ({ items, total }) => {
   const sum = total || items.reduce((s, i) => s + i.value, 0);

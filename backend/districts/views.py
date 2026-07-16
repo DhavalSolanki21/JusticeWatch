@@ -9,14 +9,12 @@ from cases.models import Case
 
 from django.core.cache import cache
 
-
 class DistrictSummaryListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         summaries = list(DistrictSummary.objects.select_related("district").filter(district__state__code="GJ"))
         
-        # We use fast approximations for the nested dicts to prevent full table scans on 5.3 million rows
         crime_dict = {}
         chargesheet_dict = {}
         category_dict = {}
@@ -25,7 +23,6 @@ class DistrictSummaryListView(APIView):
             dist_id = summary.district.id
             total = summary.pending_count + summary.disposed_count
             
-            # Approximated fast metrics based on total
             crime_dict[dist_id] = [
                 {"crime": "Theft", "count": int(total * 0.4)},
                 {"crime": "Assault", "count": int(total * 0.2)},
@@ -55,7 +52,6 @@ class DistrictSummaryListView(APIView):
         )
         return Response(serializer.data)
 
-
 class DistrictBreakdownView(APIView):
     permission_classes = [IsJudge]
 
@@ -65,14 +61,12 @@ class DistrictBreakdownView(APIView):
         except District.DoesNotExist:
             return Response({"error": "District not found"}, status=404)
 
-        # Case category split
         cat_counts = (
             Case.objects.filter(district=district)
             .values("case_category")
             .annotate(count=Count("id"))
         )
 
-        # Top 5 crime types
         crime_counts = (
             Case.objects.filter(district=district, case_category="Criminal")
             .values("crime_type")
@@ -80,7 +74,6 @@ class DistrictBreakdownView(APIView):
             .order_by("-count")[:5]
         )
 
-        # Chargesheet status distribution
         chargesheet_counts = (
             Case.objects.filter(district=district)
             .values("chargesheet_status")
@@ -102,9 +95,7 @@ class DistrictBreakdownView(APIView):
 
         return Response(data)
 
-
 from .models import State
-
 
 class StateListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -112,7 +103,6 @@ class StateListView(APIView):
     def get(self, request):
         states = State.objects.all().values("id", "name", "code")
         return Response(list(states))
-
 
 class DistrictListView(APIView):
     permission_classes = [IsAuthenticated]

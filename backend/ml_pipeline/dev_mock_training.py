@@ -1,14 +1,11 @@
-# NOTE: This is a dev/debug utility, not the real ML pipeline.
 import os
 import sys
 import pandas as pd
 import numpy as np
 
-# Add backend directory to sys.path to allow imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ml_pipeline.train_model import train_models
-
 
 def generate_mock_dataset(size=5000):
     print(f"Generating realistic mock dataset of size {size}...")
@@ -29,7 +26,6 @@ def generate_mock_dataset(size=5000):
     chargesheet_statuses = ["Not Filed", "Filed", "Under Review", "Trial"]
     disposal_types = ["acquitted", "convicted", "dismissed", "compromise", "allowed"]
 
-    # Generate columns matching train_model.py expectations
     data = {
         "crime_type": np.random.choice(crime_types, size=size),
         "case_category": np.random.choice(categories, size=size),
@@ -50,21 +46,17 @@ def generate_mock_dataset(size=5000):
 
     df = pd.DataFrame(data)
 
-    # Correlate duration_days with complexity features to make the ML learn something
     df["duration_days"] = df["case_age_days"]
 
     return df
-
 
 if __name__ == "__main__":
     mock_df = generate_mock_dataset(5000)
     print("Mock dataset generated successfully.")
 
-    # Trigger training pipeline with mock dataset
     train_models(df=mock_df)
     print("ML Pipeline run and evaluation completed successfully.")
 
-    # Read and print the RESULTS.md metrics to stdout
     results_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "artifacts", "RESULTS.md"
     )

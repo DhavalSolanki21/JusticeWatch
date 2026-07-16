@@ -33,7 +33,6 @@ const Analytics = () => {
   const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [districtFilter, setDistrictFilter] = useState('All');
 
   useEffect(() => {
@@ -57,7 +56,6 @@ const Analytics = () => {
   if (loading) return <div className="main-content"><div className="spinner" style={{ margin: 'auto' }} /></div>;
   if (!overview) return <div className="main-content"><div className="empty-state"><p>No analytics available.</p></div></div>;
 
-  // Active data logic based on filter
   let pending = overview.pending_cases;
   let total = overview.total_cases;
   let disposed = total - pending;
@@ -75,14 +73,12 @@ const Analytics = () => {
     }
   }
 
-  // Parse Top Congested Districts into BarChart format
   const topDistrictsArray = Object.entries(overview.top_congested_districts).map(([label, value]) => ({
     label,
     value,
     color: '#eab308'
   }));
 
-  // Parse Difficulty into Donut array
   const diffDonutArray = Object.entries(overview.difficulty_breakdown).map(([label, value]) => ({
     label,
     value,
@@ -91,7 +87,6 @@ const Analytics = () => {
            label === 'medium' ? 'var(--severity-medium)' : 'var(--severity-low)'
   }));
 
-  // Backlog age visualization from real data
   let backlogArray = [
     { label: '0-1 Year', value: 0, color: 'var(--severity-low)' },
     { label: '1-3 Years', value: 0, color: 'var(--severity-medium)' },
@@ -110,7 +105,6 @@ const Analytics = () => {
     ];
   }
 
-  // Judge distribution from real data
   let judgeArray = [];
   if (overview.judge_distribution) {
     judgeArray = Object.entries(overview.judge_distribution).map(([label, value]) => ({
@@ -124,7 +118,6 @@ const Analytics = () => {
     <div className="main-content">
       <div className="page-wrapper animate-fadeInUp">
         
-        {/* Header & Filter */}
         <div className="page-header" style={{ alignItems: 'center' }}>
           <div className="page-header-info">
             <h1>Judiciary Analytics & Trends</h1>
@@ -146,7 +139,6 @@ const Analytics = () => {
           </div>
         </div>
 
-        {/* Stats Row */}
         <div className="stat-grid">
           <StatCard label="Scope Pending" value={pending} valueClass="stat-value--warning" />
           <StatCard label="Scope Disposed" value={disposed} valueClass="stat-value--success" />
@@ -154,17 +146,14 @@ const Analytics = () => {
           <StatCard label="Avg Backlog Age" value={`${(avgAge / 365).toFixed(1)} Years`} />
         </div>
 
-        {/* Pendency Timeline Trend (Real Data) */}
         {districtFilter === 'All' && overview.trend && (
           <div style={{ marginBottom: '2rem' }}>
             <PendencyTimelineChart trend={overview.trend} />
           </div>
         )}
 
-        {/* 2x2 Grid */}
         <div className="grid-2">
           
-          {/* Top Congested Districts (Bar Chart) */}
           <div className="jw-card">
             <div className="jw-card-header">
               <h3 className="jw-card-title"><ChartIcon /> Top Congested Districts (Pending Cases)</h3>
@@ -174,7 +163,6 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* Difficulty Breakdown */}
           <div className="jw-card">
             <div className="jw-card-header">
               <h3 className="jw-card-title"><AlertIcon /> Scope Difficulty Distribution</h3>
@@ -184,7 +172,6 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* Backlog by Age Bracket */}
           <div className="jw-card">
             <div className="jw-card-header">
               <h3 className="jw-card-title"><CalendarIcon /> Active Case Backlog by Age Bracket</h3>
@@ -200,7 +187,6 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* Judge / Resource Allocation (Real Data) */}
           <div className="jw-card">
             <div className="jw-card-header">
               <h3 className="jw-card-title"><UsersIcon /> Judge-wise Active Case Load</h3>

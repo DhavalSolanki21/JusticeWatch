@@ -9,18 +9,15 @@ import DistrictGrid from '../components/DistrictGrid';
 import DistrictDetailModal from '../components/DistrictDetailModal';
 import DifficultyBadge from '../components/DifficultyBadge';
 
-
 const FileTextIcon = () =>
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />
   </svg>;
 
-
 const ChevronRight = () =>
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m9 18 6-6-6-6" />
   </svg>;
-
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -40,7 +37,6 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         if (isJudge) {
-          // Judge: fetch analytics overview + top critical cases
           const [overviewRes, districtRes, casesRes] = await Promise.all([
           api.get('/analytics/overview/'),
           api.get('/districts/summary/'),
@@ -50,7 +46,6 @@ const Dashboard = () => {
           setDistricts(districtRes.data.results || districtRes.data);
           setEscalationCases(casesRes.data.results || casesRes.data);
         } else {
-          // Lawyer: fetch their own cases
           const [casesRes, districtRes] = await Promise.all([
           api.get('/cases/'),
           api.get('/districts/summary/')]
@@ -76,13 +71,11 @@ const Dashboard = () => {
 
   }
 
-  // Compute lawyer stats
   const lawyerCaseCount = myCases.length;
   const hearingsCount = myCases.filter((c) => c.case_status === 'Pending').length;
   const highComplexity = myCases.filter((c) => c.difficulty_tier === 'critical' || c.difficulty_tier === 'high').length;
   const pendingChargesheet = myCases.filter((c) => c.chargesheet_status === 'Not Filed' || c.chargesheet_status === 'Under Review').length;
 
-  // Compute judge stats
   const criticalDistricts = districts.filter((d) => d.severity_tier === 'critical').length;
 
   const getChargesheetBadge = (status) => {
@@ -100,7 +93,6 @@ const Dashboard = () => {
   return (
     <div className="main-content">
       <div className="page-wrapper animate-fadeInUp">
-        {/* Page Header */}
         <div className="page-header">
           <div className="page-header-info">
             <h1 id="dashboard-title">

@@ -6,7 +6,6 @@ from django.db.models.functions import TruncMonth
 from accounts.permissions import IsJudge, IsVerifiedUser
 from cases.ml_service import predict_for_case
 
-
 class SystemOverviewAPI(APIView):
     permission_classes = [IsJudge]
 
@@ -24,8 +23,6 @@ class SystemOverviewAPI(APIView):
             d_qs = d_qs.filter(district__name=district_name)
             
         if not d_qs.exists():
-            # Fall back to Case objects if summaries haven't been computed yet
-            # (Very useful for tests and brand new databases)
             case_qs = Case.objects.filter(district__state__code="GJ")
             if district_name and district_name != "All":
                 case_qs = case_qs.filter(district__name=district_name)
@@ -36,11 +33,9 @@ class SystemOverviewAPI(APIView):
             congested_cases = case_qs.filter(case_status="Pending").values('district__name').annotate(count=Count('id')).order_by('-count')[:5]
             top_congested_districts = {item['district__name']: item['count'] for item in congested_cases}
             
-            # Dynamic difficulty breakdown
             tiers = case_qs.filter(case_status="Pending").values('difficulty_tier').annotate(count=Count('id'))
             difficulty_breakdown = {item['difficulty_tier']: item['count'] for item in tiers}
             
-            # Dynamic backlog age brackets
             from datetime import datetime
             now = datetime.now().date()
             pending_cases = case_qs.filter(case_status="Pending")
@@ -116,7 +111,6 @@ class SystemOverviewAPI(APIView):
 
         return Response(data)
 
-
 class PredictionsOverviewAPI(APIView):
     permission_classes = [IsVerifiedUser]
 
@@ -130,8 +124,6 @@ class PredictionsOverviewAPI(APIView):
         }
         disposal_counts = {"Likely": 0, "Unlikely": 0}
 
-        # We can dynamically predict for top cases, or use cached difficulty_tier if we want it fast.
-        # Fast fetch to avoid scanning index for sorting
         sample_cases = qs[:100]
 
         at_risk_cases = []
@@ -178,7 +170,6 @@ class PredictionsOverviewAPI(APIView):
 
         return Response(data)
 
-
 class AdvancedPredictView(APIView):
     permission_classes = [IsVerifiedUser]
 
@@ -186,7 +177,6 @@ class AdvancedPredictView(APIView):
         data = request.data
         case_id = data.get("case_id")
 
-        # Determine the parameters to feed to the ML
         if case_id:
             try:
                 case = Case.objects.get(id=case_id)
@@ -194,24 +184,17 @@ class AdvancedPredictView(APIView):
             except Case.DoesNotExist:
                 return Response({"error": "Case not found."}, status=404)
         else:
-            # Custom input
             pred = predict_for_case(custom_data=data)
 
         if "error" in pred:
             print("PREDICTION ERROR:", pred)
             return Response(pred, status=400)
 
-        # Generate the 3-phase roadmap based on predictions
-        # 1. Pre-Trial / Discovery
-        # 2. Trial / Hearings
-        # 3. Judgment / Resolution
-
         dur_risk = pred.get("duration_risk", "low")
         disp_likely = "Likely" in pred.get("disposal_likelihood", "Likely")
 
         roadmap = []
 
-        # Phase 1: Pre-Trial
         if dur_risk == "critical":
             roadmap.append(
                 {
@@ -231,7 +214,6 @@ class AdvancedPredictView(APIView):
                 }
             )
 
-        # Phase 2: Trial
         if disp_likely:
             roadmap.append(
                 {
@@ -251,7 +233,6 @@ class AdvancedPredictView(APIView):
                 }
             )
 
-        # Phase 3: Resolution
         if dur_risk in ["high", "critical"] and not disp_likely:
             roadmap.append(
                 {

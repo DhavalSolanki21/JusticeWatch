@@ -11,7 +11,6 @@ const ShieldAlertIcon = () =>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M12 8v4" /><path d="M12 16h.01" />
   </svg>;
 
-
 const CaseDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -66,7 +65,6 @@ const CaseDetail = () => {
   useEffect(() => {
     const fetchCaseData = async () => {
       try {
-        // Try unscoped endpoint first so judges can view any district's case
         let caseRes;
         try {
           caseRes = await api.get(`/cases/${id}/`);
@@ -82,7 +80,6 @@ const CaseDetail = () => {
         setEditNotes(caseRes.data.case_notes || '');
         setJudgeCaseStatus(caseRes.data.case_status);
 
-        // Fetch prediction separately — non-blocking
         try {
           const diffRes = await api.get(`/cases/${id}/predict/`);
           setPrediction(diffRes.data);
@@ -90,7 +87,6 @@ const CaseDetail = () => {
           console.warn('Prediction unavailable for this case:', predErr);
         }
 
-        // Fetch hearings separately — non-blocking
         try {
           const hearingRes = await api.get(`/timeline/?case=${id}`);
           setHearings(hearingRes.data.results || hearingRes.data);
@@ -154,7 +150,6 @@ const CaseDetail = () => {
     if (!judgePurpose.trim() || !judgeOutcomeNotes.trim()) return;
     setLoggingHearing(true);
     try {
-      // 1. Log the new hearing event
       await api.post('/timeline/', {
         case: parseInt(id),
         hearing_date: judgeHearingDate,
@@ -163,17 +158,14 @@ const CaseDetail = () => {
         next_hearing_date: judgeNextHearingDate || null
       });
 
-      // 2. Modify case status
       const casePatchRes = await api.patch(`/cases/${id}/`, {
         case_status: judgeCaseStatus
       });
 
-      // 3. Refresh data to instantly render updates
       const hearingRes = await api.get(`/timeline/?case=${id}`);
       setCaseItem(casePatchRes.data);
       setHearings(hearingRes.data.results || hearingRes.data);
 
-      // Reset form fields (except date/status defaults)
       setJudgePurpose('');
       setJudgeOutcomeNotes('');
       setJudgeNextHearingDate('');
@@ -264,7 +256,6 @@ const CaseDetail = () => {
     <div className="main-content">
       <div className="page-wrapper animate-fadeInUp">
         
-        {/* Back Link */}
         <button className="back-link" onClick={() => navigate(-1)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
@@ -272,7 +263,6 @@ const CaseDetail = () => {
           Back to Directory
         </button>
 
-        {/* Case Banner */}
         <div className="case-banner">
           <div>
             <div className="case-banner-id">
@@ -300,10 +290,8 @@ const CaseDetail = () => {
         </div>
 
         <div className="grid-2-1">
-          {/* Left Column */}
           <div className="flex-col space-y-2">
             
-            {/* Dossier Grid */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <h2 className="jw-card-title">Judicial Case Information Dossier</h2>
@@ -383,7 +371,6 @@ const CaseDetail = () => {
               </div>
             </div>
 
-            {/* Case Notes Log */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <h2 className="jw-card-title">Case Notes Log</h2>
@@ -407,7 +394,6 @@ const CaseDetail = () => {
               </form>
             </div>
 
-            {/* Hearing Timeline */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <h2 className="jw-card-title">Judicial Hearing Timeline Log</h2>
@@ -417,10 +403,8 @@ const CaseDetail = () => {
             
           </div>
 
-          {/* Right Column */}
           <div className="flex-col space-y-2">
             
-            {/* Case Predictions */}
             {prediction && !prediction.error &&
             <div className="jw-card jw-card--accent">
                 <div className="jw-card-header">
@@ -470,7 +454,6 @@ const CaseDetail = () => {
               </div>
             }
 
-            {/* Judge Actions: Log Hearing & Change Status */}
             {user?.role === 'judge' && (
               <div className="jw-card" style={{ border: '1px solid var(--accent-main)' }}>
                 <div className="jw-card-header">
@@ -537,7 +520,6 @@ const CaseDetail = () => {
                 </form>
               </div>
             )}
-            {/* Assigned Litigators */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <h2 className="jw-card-title">Assigned Litigators</h2>
@@ -569,7 +551,6 @@ const CaseDetail = () => {
               </div>
               }
 
-              {/* Judge Form: Assign Any Lawyer */}
               {isJudge && (
                 <form onSubmit={handleAssignLawyer} style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Assign New Advocate</div>
@@ -604,7 +585,6 @@ const CaseDetail = () => {
                 </form>
               )}
 
-              {/* Lawyer Form: Self-Assign representation */}
               {user?.role === 'lawyer' && !isAssignedLawyer && (
                 <form onSubmit={handleAssignLawyer} style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Represent a Party</div>
@@ -628,7 +608,6 @@ const CaseDetail = () => {
               )}
             </div>
 
-            {/* Case Notes Editor */}
             <div className="jw-card">
               <div className="jw-card-header">
                 <h2 className="jw-card-title">Case Trial Notes</h2>

@@ -6,10 +6,8 @@ from districts.models import District, State
 from cases.models import Case, CaseAssignment
 from timeline.models import Hearing
 
-
 class TimelineTests(APITestCase):
     def setUp(self):
-        # Setup state, districts
         self.state = State.objects.create(name="Gujarat", code="GJ")
         self.district_ahm = District.objects.create(
             state=self.state, name="Ahmedabad", code="AHM"
@@ -18,7 +16,6 @@ class TimelineTests(APITestCase):
             state=self.state, name="Surat", code="SUR"
         )
 
-        # Setup users
         self.judge_ahm = User.objects.create_user(
             username="judge_ahm",
             email="judge_ahm@justicewatch.com",
@@ -45,7 +42,6 @@ class TimelineTests(APITestCase):
             is_verified=True,
         )
 
-        # Setup cases
         self.case_ahm = Case.objects.create(
             case_number="CIV/2026/AHM111",
             district=self.district_ahm,
@@ -69,12 +65,10 @@ class TimelineTests(APITestCase):
             case_status="Pending",
         )
 
-        # Assign lawyer to Ahmedabad case
         CaseAssignment.objects.create(
             case=self.case_ahm, lawyer=self.lawyer_assigned, representing="Petitioner"
         )
 
-        # Create an initial hearing
         self.hearing = Hearing.objects.create(
             case=self.case_ahm,
             hearing_date="2026-03-01",
@@ -90,7 +84,6 @@ class TimelineTests(APITestCase):
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["purpose"], "First Hearing")
 
-        # Unassigned lawyer sees nothing
         self.client.force_authenticate(user=self.lawyer_unassigned)
         response = self.client.get(reverse("hearing-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)

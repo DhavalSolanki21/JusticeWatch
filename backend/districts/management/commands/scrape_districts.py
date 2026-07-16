@@ -5,7 +5,6 @@ from django.core.management.base import BaseCommand
 from districts.models import State, District
 import random
 
-
 class Command(BaseCommand):
     help = (
         "Scrapes Indian States and Districts from Wikipedia and populates the database"
@@ -47,21 +46,17 @@ class Command(BaseCommand):
 
             header_text = prev.text.strip()
 
-            # Skip Overview tables
             if "Overview" in header_text or "overview" in header_text.lower():
                 continue
 
-            # Header text usually looks like "Andhra Pradesh (AP)"
             match = re.search(r"^(.*?)\s*\((\w{2})\)$", header_text)
             if match:
                 state_name = match.group(1).strip()
                 state_code = match.group(2).strip()
             else:
                 state_name = header_text
-                # Generate a temporary code if none found
                 state_code = state_name[:2].upper()
 
-            # Create or get state
             state_obj, created = State.objects.get_or_create(
                 name=state_name, defaults={"code": state_code}
             )
@@ -72,12 +67,10 @@ class Command(BaseCommand):
                     self.style.SUCCESS(f"Created State: {state_name} ({state_code})")
                 )
 
-            # Now parse the districts in this table
             rows = table.find_all("tr")
             if len(rows) > 1:
                 ths = [th.text.strip().lower() for th in rows[0].find_all(["th", "td"])]
 
-                # Find indices for relevant columns
                 dist_idx = -1
                 code_idx = -1
                 pop_idx = -1
@@ -95,7 +88,6 @@ class Command(BaseCommand):
                         cols = row.find_all(["th", "td"])
                         if len(cols) > dist_idx:
                             district_name = cols[dist_idx].text.strip()
-                            # Strip citation brackets like [14]
                             district_name = re.sub(
                                 r"\[\d+\]", "", district_name
                             ).strip()
@@ -108,7 +100,6 @@ class Command(BaseCommand):
                             if not dist_code:
                                 dist_code = district_name[:3].upper()
 
-                            # Ensure code is unique in DB
                             base_code = dist_code
                             counter = 1
                             while (
@@ -129,7 +120,6 @@ class Command(BaseCommand):
 
                             mock_courts = random.randint(1, 10)
 
-                            # If District exists by name, update it to avoid constraint errors
                             try:
                                 dist_obj = District.objects.get(name=district_name)
                                 d_created = False
@@ -143,7 +133,6 @@ class Command(BaseCommand):
                                 )
                                 d_created = True
 
-                            # If we just want to ensure it has a state
                             if not d_created and dist_obj.state != state_obj:
                                 dist_obj.state = state_obj
                                 dist_obj.save()

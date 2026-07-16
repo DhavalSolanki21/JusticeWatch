@@ -40,7 +40,6 @@ const MyHistory = () => {
     }
   }, [user, isJudge]);
 
-  // Client-side filtering for user's convenience
   const filteredCases = cases.filter(c => {
     const matchesSearch = c.case_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.crime_type && c.crime_type.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -63,7 +62,6 @@ const MyHistory = () => {
           </div>
         </div>
 
-        {/* Filter Controls */}
         <div className="jw-card" style={{ marginBottom: '1.5rem' }}>
           <div className="search-bar" style={{ gap: '1rem', display: 'flex', flexWrap: 'wrap' }}>
             <div className="form-group" style={{ flex: 2, minWidth: '200px', marginBottom: 0 }}>
@@ -110,7 +108,6 @@ const MyHistory = () => {
           </div>
         </div>
 
-        {/* Content Card */}
         <div className="jw-card">
           {loading ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>

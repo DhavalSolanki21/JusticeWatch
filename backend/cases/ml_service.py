@@ -6,7 +6,6 @@ from django.conf import settings
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from .models import Case
 
-# Paths to the saved ML files
 DURATION_MODEL_PATH = os.path.join(
     settings.BASE_DIR, "ml_pipeline", "artifacts", "duration_regressor.pkl"
 )
@@ -23,10 +22,8 @@ ENCODERS_PATH = os.path.join(
     settings.BASE_DIR, "ml_pipeline", "artifacts", "encoders.pkl"
 )
 
-
 def safe_encode(le, val):
     try:
-        # if val is string and in classes
         if str(val) in le.classes_:
             return le.transform([str(val)])[0]
         else:
@@ -34,15 +31,12 @@ def safe_encode(le, val):
     except:
         return 0
 
-
 _rf_duration = None
 _rf_disposal = None
 _dt_disposal = None
 _knn_disposal = None
 _encoders = None
 
-
-# Force Django to auto-reload and clear memory cache for new models
 def load_models():
     global _rf_duration, _rf_disposal, _dt_disposal, _knn_disposal, _encoders
     if _rf_duration is None or _encoders is None:
@@ -67,7 +61,6 @@ def load_models():
         _knn_disposal,
         _encoders,
     )
-
 
 def predict_for_case(case=None, custom_data=None):
     """
@@ -126,7 +119,6 @@ def predict_for_case(case=None, custom_data=None):
             num_parties = case.num_parties
             num_hearings = case.hearings.count()
 
-            # Fetch hearing date info
             hearings = case.hearings.order_by("hearing_date")
             first_h = hearings.first()
             last_h = hearings.last()
@@ -156,7 +148,6 @@ def predict_for_case(case=None, custom_data=None):
         category_encoded = safe_encode(le_category, category_val)
         status_encoded = safe_encode(le_status, status_val)
 
-        # Build features for regressor (excludes case_age_days)
         df_reg = pd.DataFrame(
             [
                 {
@@ -173,7 +164,6 @@ def predict_for_case(case=None, custom_data=None):
             ]
         )
 
-        # Build features for classifier (includes case_age_days)
         df_clf = pd.DataFrame(
             [
                 {
@@ -191,7 +181,6 @@ def predict_for_case(case=None, custom_data=None):
             ]
         )
 
-        # Duration Risk Prediction (Regressor)
         predicted_days = rf_duration.predict(df_reg)[0]
         if predicted_days < 180:
             dur_class_name = "low"
@@ -203,7 +192,6 @@ def predict_for_case(case=None, custom_data=None):
             dur_class_name = "critical"
         dur_confidence = 85.0  # Regression heuristic
 
-        # Disposal Likelihood Prediction (Multi-Class)
         disp_probs = rf_disposal.predict_proba(df_clf)[0]
         disp_class_idx = rf_disposal.predict(df_clf)[0]
         disp_confidence = round(max(disp_probs) * 100, 1)
@@ -215,10 +203,8 @@ def predict_for_case(case=None, custom_data=None):
 
         disp_text = f"Likely ({disp_type_str.title()})"
 
-        # --- Model Comparison Dictionary ---
         model_comparison = []
 
-        # Helper to extract name + confidence
         def format_pred(model, name):
             if not model:
                 return None
@@ -247,7 +233,6 @@ def predict_for_case(case=None, custom_data=None):
         if cmp_knn:
             model_comparison.append(cmp_knn)
 
-        # Feature Importance Factors (just heuristic rules based on input for UI explanation)
         risk_factors = []
         if days_since_filing > 365:
             risk_factors.append(f"Case age is high ({days_since_filing} days).")

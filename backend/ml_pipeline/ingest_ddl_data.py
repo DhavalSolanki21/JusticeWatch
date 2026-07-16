@@ -6,7 +6,6 @@ import numpy as np
 import datetime
 from tqdm import tqdm
 
-# Add backend directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "justicewatch.settings")
 django.setup()
@@ -18,11 +17,9 @@ from districts.models import District, State
 
 User = get_user_model()
 
-
 def run_ingestion(sample_size=1000):
     print("Loading data...")
 
-    # 1. Load Keys
     base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     keys_path = os.path.join(base_path, "keys")
 
@@ -33,9 +30,6 @@ def run_ingestion(sample_size=1000):
     purpose_key = pd.read_csv(os.path.join(keys_path, "purpose_name_key.csv"))
 
     print("Loading cases_2018.csv...")
-    # Read only Gujarat (state_code=17) cases from 2018
-    # We load chunk by chunk to avoid massive memory usage if needed, but 2018 alone is ~2.7GB,
-    # we can just read the whole thing and filter, or we can use an iterator. Let's use an iterator.
     cases_iter = pd.read_csv(
         os.path.join(base_path, "cases", "cases_2018.csv"),
         chunksize=100000,
@@ -54,15 +48,11 @@ def run_ingestion(sample_size=1000):
 
     df = pd.concat(gj_cases)
 
-    # Take a random sample for dev database (1000 cases is a good start)
     if len(df) > sample_size:
         df = df.sample(n=sample_size, random_state=42)
 
     print(f"Sampled {len(df)} cases for ingestion.")
 
-    # Merge keys to get string names
-    # type_name
-    # Since year is in type_key, we need to match by year and type_name, or just take the max year to simplify.
     type_key_2018 = type_key[type_key["year"] == 2018].drop_duplicates("type_name")
     df = df.merge(
         type_key_2018[["type_name", "type_name_s"]], on="type_name", how="left"
@@ -89,14 +79,12 @@ def run_ingestion(sample_size=1000):
         dist_key_2018[["dist_code", "district_name"]], on="dist_code", how="left"
     )
 
-    # Pre-process dates
     df["date_of_filing"] = pd.to_datetime(df["date_of_filing"], errors="coerce")
     df["date_of_decision"] = pd.to_datetime(df["date_of_decision"], errors="coerce")
     df["date_first_list"] = pd.to_datetime(df["date_first_list"], errors="coerce")
     df["date_last_list"] = pd.to_datetime(df["date_last_list"], errors="coerce")
     df["date_next_list"] = pd.to_datetime(df["date_next_list"], errors="coerce")
 
-    # Need a default judge for hearings
     admin_user = User.objects.filter(is_superuser=True).first()
     if not admin_user:
         admin_user = User.objects.first()
@@ -105,7 +93,6 @@ def run_ingestion(sample_size=1000):
     cases_created = 0
     hearings_created = 0
 
-    # Clear existing data so we don't duplicate
     Case.objects.all().delete()
     District.objects.all().delete()
 
@@ -113,7 +100,6 @@ def run_ingestion(sample_size=1000):
         if pd.isna(row["date_of_filing"]):
             continue
 
-        # 1. District and State
         state_obj, _ = State.objects.get_or_create(
             name="Gujarat", defaults={"code": "GJ"}
         )
@@ -146,7 +132,6 @@ def run_ingestion(sample_size=1000):
             },
         )
 
-        # 2. Case Category (heuristic from type_name_s)
         type_s = str(row["type_name_s"]).lower()
         if "cr" in type_s or "criminal" in type_s or "bail" in type_s:
             case_category = "Criminal"
@@ -155,13 +140,11 @@ def run_ingestion(sample_size=1000):
         else:
             case_category = "Civil"
 
-        # 3. Status
         if pd.notna(row["date_of_decision"]):
             status = "Disposed"
         else:
             status = "Pending"
 
-        # 4. Difficulty Tier (Real data!)
         difficulty_tier = "low"
         if pd.notna(row["date_of_decision"]) and pd.notna(row["date_of_filing"]):
             duration_days = (row["date_of_decision"] - row["date_of_filing"]).days
@@ -174,7 +157,6 @@ def run_ingestion(sample_size=1000):
             else:
                 difficulty_tier = "critical"
         else:
-            # For pending cases, we can compute age
             age_days = (datetime.datetime(2018, 12, 31) - row["date_of_filing"]).days
             if age_days > 730:
                 difficulty_tier = "critical"
@@ -210,9 +192,6 @@ def run_ingestion(sample_size=1000):
         )
         cases_created += 1
 
-        # 5. Hearing
-        # The dataset gives us the last list date and next list date.
-        # We can create one hearing to represent the current state.
         if pd.notna(row["date_last_list"]):
             Hearing.objects.create(
                 case=case_obj,
@@ -235,7 +214,5 @@ def run_ingestion(sample_size=1000):
     print(f"Cases created: {cases_created}")
     print(f"Hearings created: {hearings_created}")
 
-
 if __name__ == "__main__":
-    # Ingest 1500 cases to have a healthy amount of training data
     run_ingestion(sample_size=1500)

@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 
-
 class Case(models.Model):
     CATEGORY_CHOICES = (
         ("Civil", "Civil"),
@@ -61,7 +60,6 @@ class Case(models.Model):
     num_parties = models.IntegerField(default=2)
     case_notes = models.TextField(null=True, blank=True)
 
-    # ML Fields
     difficulty_score = models.FloatField(null=True, blank=True)
     difficulty_tier = models.CharField(
         max_length=20, choices=TIER_CHOICES, null=True, blank=True
@@ -75,7 +73,6 @@ class Case(models.Model):
 
     def __str__(self):
         return self.case_number
-
 
 class CaseAssignment(models.Model):
     REPRESENTING_CHOICES = (

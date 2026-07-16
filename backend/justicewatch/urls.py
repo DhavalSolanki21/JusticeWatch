@@ -18,14 +18,12 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # Swagger sometimes redirects to accounts/login/ for session auth
     path("accounts/login/", admin.site.login),
     path("api/auth/", include("accounts.urls")),
     path("api/districts/", include("districts.urls")),
     path("api/cases/", include("cases.urls")),
     path("api/analytics/", include("analytics.urls")),
     path("api/timeline/", include("timeline.urls")),
-    # Swagger Docs
     path(
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),

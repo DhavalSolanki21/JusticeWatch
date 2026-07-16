@@ -130,7 +130,6 @@ const Profile = () => {
           </form>
         </div>
 
-        {/* Case History Section */}
         <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>
           {user.role === 'judge' ? 'My Handled Cases' : 'My Case History'}
         </h2>

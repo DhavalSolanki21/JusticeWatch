@@ -10,21 +10,17 @@ const BrainIcon = () =>
     <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
   </svg>;
 
-
 const SearchIcon = () =>
 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
   </svg>;
 
-
 const Predictions = () => {
   const [activeTab, setActiveTab] = useState('interactive');
 
-  // Overview State
   const [overview, setOverview] = useState(null);
   const [loadingOverview, setLoadingOverview] = useState(true);
 
-  // Interactive Form State
   const [predictMode, setPredictMode] = useState('custom');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -43,7 +39,6 @@ const Predictions = () => {
     female_petitioner: 0
   });
 
-  // Prediction Result State
   const [predictionResult, setPredictionResult] = useState(null);
   const [isPredicting, setIsPredicting] = useState(false);
   const [predictError, setPredictError] = useState(null);
@@ -98,7 +93,6 @@ const Predictions = () => {
     <div className="main-content">
       <div className="page-wrapper animate-fadeInUp">
         
-        {/* Header */}
         <div className="page-header" style={{ alignItems: 'center', borderBottom: 'none', paddingBottom: 0 }}>
           <div className="page-header-info">
             <h1><BrainIcon /> AI Case Predictions</h1>
@@ -121,11 +115,9 @@ const Predictions = () => {
           </div>
         </div>
 
-        {/* --- INTERACTIVE PREDICTOR TAB --- */}
         {activeTab === 'interactive' &&
         <div className="grid-2" style={{ marginTop: '1.5rem', gap: '2rem' }}>
             
-            {/* INPUT PANEL */}
             <div className="jw-card" style={{ alignSelf: 'start' }}>
               <div className="jw-card-header" style={{ borderBottom: '1px solid var(--border-main)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                 <h3 className="jw-card-title">Case Input Parameters</h3>
@@ -233,7 +225,6 @@ const Predictions = () => {
             }
             </div>
 
-            {/* RESULTS PANEL */}
             <div className="jw-card" style={{ alignSelf: 'start', backgroundColor: predictionResult ? 'var(--bg-card)' : 'var(--bg-input)' }}>
               <div className="jw-card-header" style={{ borderBottom: '1px solid var(--border-main)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                 <h3 className="jw-card-title">AI Actionable Roadmap</h3>
@@ -329,7 +320,6 @@ const Predictions = () => {
           </div>
         }
 
-        {/* --- OVERVIEW TAB (Existing content) --- */}
         {activeTab === 'overview' &&
         <div style={{ marginTop: '1.5rem' }}>
             {loadingOverview ?

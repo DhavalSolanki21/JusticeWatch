@@ -6,16 +6,13 @@ from districts.models import District, State
 from cases.models import Case
 from unittest.mock import patch
 
-
 class AnalyticsTests(APITestCase):
     def setUp(self):
-        # Setup state, district
         self.state = State.objects.create(name="Gujarat", code="GJ")
         self.district = District.objects.create(
             state=self.state, name="Ahmedabad", code="AHM"
         )
 
-        # Setup users
         self.judge = User.objects.create_user(
             username="judge1",
             email="judge1@justicewatch.com",
@@ -34,7 +31,6 @@ class AnalyticsTests(APITestCase):
             is_verified=True,
         )
 
-        # Setup cases
         self.case1 = Case.objects.create(
             case_number="CIV/2026/AHM111",
             district=self.district,
@@ -64,12 +60,10 @@ class AnalyticsTests(APITestCase):
         """Only judges can access system overview analytics."""
         overview_url = reverse("analytics-overview")
 
-        # 1. Lawyer is forbidden
         self.client.force_authenticate(user=self.lawyer)
         response = self.client.get(overview_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # 2. Judge succeeds
         self.client.force_authenticate(user=self.judge)
         response = self.client.get(overview_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -78,7 +72,6 @@ class AnalyticsTests(APITestCase):
         self.assertIn("status_breakdown", response.data)
         self.assertIn("difficulty_breakdown", response.data)
         self.assertIn("backlog_age_brackets", response.data)
-        # Verify age bracket logic works (case2 filed in 2024 is in 1-3 Years bracket)
         self.assertEqual(response.data["backlog_age_brackets"]["1-3 Years"], 1)
         self.assertEqual(response.data["backlog_age_brackets"]["0-1 Year"], 1)
 
@@ -121,7 +114,6 @@ class AnalyticsTests(APITestCase):
         self.assertIn("roadmap", response.data)
         self.assertEqual(response.data["predictions"]["duration_risk"], "critical")
 
-        # Verify roadmap phases logic for critical risk & unlikely disposal
         roadmap = response.data["roadmap"]
         self.assertEqual(len(roadmap), 3)
         self.assertEqual(roadmap[0]["phase"], "Pre-Trial & Discovery")

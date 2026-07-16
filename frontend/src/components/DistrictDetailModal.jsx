@@ -3,14 +3,7 @@ import { X, Landmark, ShieldAlert, ArrowRight, FolderKanban, ClipboardCheck } fr
 
 import "./DistrictDetailModal.css";
 
-
-
-
-
-
-
 export default function DistrictDetailModal({ district, onClose, onViewAllCases }) {
-  // Severity styling colors for labels
   const getSeverityBadge = (severity) => {
     switch (severity?.toLowerCase()) {
       case "critical":
@@ -27,7 +20,6 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
     }
   };
 
-  // Calculate real category splits from API
   let civilCount = 0;
   let criminalCount = 0;
   let appealCount = 0;
@@ -47,7 +39,6 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
   const criminalPct = totalSplit > 0 ? (criminalCount / totalSplit * 100).toFixed(0) : "0";
   const appealPct = totalSplit > 0 ? (appealCount / totalSplit * 100).toFixed(0) : "0";
 
-  // Conversion of backlog average age
   const ageInYears = (district.avg_case_age_days / 365).toFixed(1);
 
   const chargesheetDistribution = district.chargesheet_distribution || [];
@@ -56,15 +47,12 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
   return (
     <React.Fragment>
       <div className="district-detail-backdrop">
-        {/* Click-out backdrop shadow */}
         <div className="district-detail-backdrop-click" onClick={onClose} />
 
-        {/* Modal Card */}
         <div
           className="district-detail-card"
           id={`district-detail-modal-${district.id}`}>
           
-          {/* Top Header */}
           <div className="district-detail-header">
             <div className="district-detail-header-left">
               <div className="district-detail-title-row">
@@ -89,9 +77,7 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
             </button>
           </div>
 
-          {/* Scrollable Data Body */}
           <div className="district-detail-body">
-            {/* Key statistical numbers */}
             <div className="district-detail-stats-grid">
               <div className="district-detail-stat-box">
                 <span className="district-detail-stat-label">Pending Cases</span>
@@ -120,16 +106,13 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
               </div>
             </div>
 
-            {/* Double Column Breakdown */}
             <div className="district-detail-breakdown-grid">
-              {/* Split Categorization Bar */}
               <div className="district-detail-breakdown-box">
                 <h3 className="district-detail-breakdown-header">
                   <FolderKanban className="district-detail-breakdown-icon icon-gold" />
                   <span>Caseload Split Category</span>
                 </h3>
                 <div className="district-detail-progress-container">
-                  {/* Custom Tri-segmented Progress Bar */}
                   <div className="district-detail-tri-bar">
                     <div style={{ width: `${civilPct}%`, backgroundColor: '#B08D57' }} title={`Civil: ${civilPct}%`} />
                     <div style={{ width: `${criminalPct}%`, backgroundColor: '#b45309' }} title={`Criminal: ${criminalPct}%`} />
@@ -155,7 +138,6 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
                 </div>
               </div>
 
-              {/* Chargesheet Filing Progress Metrics */}
               <div className="district-detail-breakdown-box">
                 <h3 className="district-detail-breakdown-header">
                   <ClipboardCheck className="district-detail-breakdown-icon icon-gold" />
@@ -193,7 +175,6 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
               </div>
             </div>
 
-            {/* Highest Offense Vectors */}
             <div className="district-detail-breakdown-box">
               <h3 className="district-detail-breakdown-header">
                 <ShieldAlert className="district-detail-breakdown-icon icon-rose" />
@@ -215,7 +196,6 @@ export default function DistrictDetailModal({ district, onClose, onViewAllCases 
             </div>
           </div>
 
-          {/* Bottom Actions footer */}
           <div className="district-detail-footer">
             <p className="district-detail-footer-code">
               CNR RECORD CODE RANGE: 24-{String(district.id).padStart(2, '0')}-XXXX

@@ -1,4 +1,3 @@
-// Native fetch wrapper replacing axios
 const api = async (url, options = {}) => {
   const baseURL = '/api';
   const fullUrl = url.startsWith('http') ? url : `${baseURL}${url}`;
@@ -41,7 +40,6 @@ const api = async (url, options = {}) => {
     }
   }
 
-  // To mimic axios API a bit:
   const isJson = response.headers.get('content-type')?.includes('application/json');
   const data = isJson ? await response.json() : await response.text();
   

@@ -9,7 +9,6 @@ const ScaleIcon = () =>
     <path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h18" />
   </svg>;
 
-
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -43,7 +42,6 @@ const Login = () => {
     <div className="auth-page" style={{ alignItems: 'center', justifyContent: 'center' }}>
       <div className="auth-bg-grid" />
 
-      {/* Back button */}
       <Link to="/" className="back-link" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', zIndex: 20 }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
@@ -52,14 +50,12 @@ const Login = () => {
       </Link>
 
       <div className="auth-form-container animate-fadeInUp">
-        {/* Brand */}
         <div className="auth-brand">
           <ScaleIcon />
           <h2>JusticeWatch</h2>
           <p>Judicial Records Entry Point</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label" htmlFor="login-username">Username</label>
@@ -99,7 +95,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Error */}
           {displayError &&
           <div className="notice notice-error animate-fadeIn" style={{ marginBottom: '1rem' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -119,7 +114,6 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Footer */}
         <div className="auth-footer">
           <p>
             New to the judiciary analytics system?{' '}

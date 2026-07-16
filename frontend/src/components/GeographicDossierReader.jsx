@@ -1,13 +1,7 @@
 import React from "react";
 import { Landmark, AlertCircle, Sparkles } from "lucide-react";
 
-
 import "./GeographicDossierReader.css";
-
-
-
-
-
 
 export function GeographicDossierReader({ hoveredDetails, hoveredShape }) {
   return (
@@ -17,12 +11,10 @@ export function GeographicDossierReader({ hoveredDetails, hoveredShape }) {
         <div
           className="geo-dossier-card">
           
-            {/* Top Emblem */}
             <div className="geo-dossier-emblem">
               <Landmark />
             </div>
 
-            {/* Dossier Header */}
             <div>
               <span className="geo-dossier-eyebrow">District dossier</span>
               <h3 className="geo-dossier-title">
@@ -33,7 +25,6 @@ export function GeographicDossierReader({ hoveredDetails, hoveredShape }) {
               </span>
             </div>
 
-            {/* Key Metrics */}
             <div className="geo-dossier-metrics">
               <div>
                 <div className="geo-dossier-metric-label">Pending Backlog</div>
@@ -49,7 +40,6 @@ export function GeographicDossierReader({ hoveredDetails, hoveredShape }) {
               </div>
             </div>
 
-            {/* Backlog Severity Indicator */}
             <div className="geo-dossier-severity" title={`Severity Load: ${hoveredDetails.severity_tier?.toUpperCase()} (${hoveredDetails.pending_count} pending cases)`}>
               <div className="geo-dossier-severity-header">
                 <span>Backlog Severity Indicator</span>
@@ -67,7 +57,6 @@ export function GeographicDossierReader({ hoveredDetails, hoveredShape }) {
               </div>
             </div>
 
-            {/* Top Litigation Incident */}
             <div className="geo-dossier-incident">
               <div className="geo-dossier-incident-label">Top Litigation Type</div>
               <div className="geo-dossier-incident-box">
@@ -85,13 +74,11 @@ export function GeographicDossierReader({ hoveredDetails, hoveredShape }) {
               </div>
             </div>
 
-            {/* Click Warning Guide */}
             <div className="geo-dossier-footer">
               Click district to access database
             </div>
         </div> : (
 
-        /* Default State Placeholder card */
         <div
           className="geo-dossier-card geo-dossier-card-placeholder">
           

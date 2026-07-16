@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 
-// Pages
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -19,7 +18,6 @@ import FileCase from './pages/FileCase';
 import AllCases from './pages/AllCases';
 import MyHistory from './pages/MyHistory';
 
-// Protected Route Wrapper
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading } = useAuth();
 
@@ -52,13 +50,11 @@ const App = () => {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Public Routes */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/pending-verification" element={<PendingVerification />} />
 
-          {/* Protected Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/search" element={<ProtectedRoute><CaseSearch /></ProtectedRoute>} />
           <Route path="/cases/:id" element={<ProtectedRoute><CaseDetail /></ProtectedRoute>} />
@@ -71,7 +67,6 @@ const App = () => {
           <Route path="/all-cases" element={<ProtectedRoute><AllCases /></ProtectedRoute>} />
           <Route path="/my-history" element={<ProtectedRoute><MyHistory /></ProtectedRoute>} />
 
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

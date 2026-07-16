@@ -62,7 +62,6 @@ const Register = () => {
     <div className="auth-page" style={{ alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <div className="auth-bg-grid" />
 
-      {/* Back */}
       <Link to="/login" className="back-link" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', zIndex: 20 }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m12 19-7-7 7-7" /><path d="M19 12H5" />
@@ -71,7 +70,6 @@ const Register = () => {
       </Link>
 
       <div className="auth-form-container auth-form-container--wide animate-fadeInUp">
-        {/* Brand */}
         <div className="auth-brand">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m16 16 3-8 3 8c-.1.3-.3.5-.6.5h-4.8c-.3 0-.5-.2-.6-.5z" />
@@ -83,21 +81,18 @@ const Register = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Full Name */}
           <div className="form-group">
             <label className="form-label" htmlFor="reg-fullname">Full Official Name</label>
             <input type="text" id="reg-fullname" className="form-control" value={fullName}
             onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Mr. Alok K. Sanghavi" required />
           </div>
 
-          {/* Username */}
           <div className="form-group">
             <label className="form-label" htmlFor="reg-username">Username</label>
             <input type="text" id="reg-username" className="form-control" value={username}
             onChange={(e) => setUsername(e.target.value)} placeholder="e.g. advocate_sanghavi" required />
           </div>
 
-          {/* Email */}
           <div className="form-group">
             <label className="form-label" htmlFor="reg-email">Bar Council Email</label>
             <input type="email" id="reg-email" className="form-control" value={email}
@@ -105,7 +100,6 @@ const Register = () => {
             placeholder="e.g. advocate@barcouncil.in" required />
           </div>
 
-          {/* Bar Council ID field */}
           <div className="form-group">
             <label className="form-label" htmlFor="reg-extra">
               Bar Council Identification Number
@@ -115,7 +109,6 @@ const Register = () => {
             placeholder="e.g. GJ/2384/2016" />
           </div>
 
-          {/* Passwords */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label" htmlFor="reg-pass">Password</label>
@@ -129,7 +122,6 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Error */}
           {displayError &&
           <div className="notice notice-error animate-fadeIn" style={{ marginBottom: '1rem' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -139,7 +131,6 @@ const Register = () => {
             </div>
           }
 
-          {/* Verification notice */}
           <div className="notice notice-info" style={{ marginBottom: '1.25rem' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" />
