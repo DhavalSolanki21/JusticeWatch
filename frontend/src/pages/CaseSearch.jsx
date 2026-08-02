@@ -52,13 +52,13 @@ const CaseSearch = () => {
       if (status) params.case_status = status;
       if (district) params.district__name = district; // Assumes backend supports this filter
 
-      const endpoint = isLawyer ? '/cases/' : '/cases/all/';
+      const endpoint = '/cases/all/';
       const res = await api.get(endpoint, { params });
 
       if (res.data.results) {
         setCases(res.data.results);
         setTotalCount(res.data.count);
-        setTotalPages(Math.ceil(res.data.count / 10));
+        setTotalPages(Math.ceil(res.data.count / 50));
       } else {
         setCases(res.data);
         setTotalCount(res.data.length);

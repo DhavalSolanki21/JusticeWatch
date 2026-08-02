@@ -33,8 +33,11 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+  if (requiredRole) {
+    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!roles.includes(user.role)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return (
@@ -58,11 +61,11 @@ const App = () => {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/search" element={<ProtectedRoute><CaseSearch /></ProtectedRoute>} />
           <Route path="/cases/:id" element={<ProtectedRoute><CaseDetail /></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute requiredRole="judge"><Analytics /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute requiredRole={['judge', 'admin']}><Analytics /></ProtectedRoute>} />
           <Route path="/predictions" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           
-          <Route path="/approvals" element={<ProtectedRoute requiredRole="judge"><ApprovalPanel /></ProtectedRoute>} />
+          <Route path="/approvals" element={<ProtectedRoute requiredRole={['judge', 'admin']}><ApprovalPanel /></ProtectedRoute>} />
           <Route path="/file-case" element={<ProtectedRoute requiredRole="lawyer"><FileCase /></ProtectedRoute>} />
           <Route path="/all-cases" element={<ProtectedRoute><AllCases /></ProtectedRoute>} />
           <Route path="/my-history" element={<ProtectedRoute><MyHistory /></ProtectedRoute>} />

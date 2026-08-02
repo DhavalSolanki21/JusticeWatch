@@ -31,7 +31,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('map');
 
-  const isJudge = user?.role === 'judge';
+  const isJudge = user?.role === 'judge' || user?.role === 'admin';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,7 +105,7 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="notice notice-info" style={{ padding: '0.5rem 0.75rem', fontSize: '0.7rem' }}>
-            Welcome, {isJudge ? 'Hon\'ble Justice' : 'Advocate'} {user?.full_name?.split(' ').slice(-1)[0]}
+            Welcome, {user?.role === 'admin' ? 'Administrator' : user?.role === 'judge' ? 'Hon\'ble Justice' : 'Advocate'} {user?.full_name?.split(' ').slice(-1)[0]}
           </div>
         </div>
 

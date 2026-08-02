@@ -108,5 +108,5 @@ class DistrictListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        districts = District.objects.filter(state__code="GJ").values("id", "name", "code", "state_id")
+        districts = District.objects.filter(state__code="GJ").order_by("name").values("id", "name", "code", "state_id")
         return Response(list(districts))

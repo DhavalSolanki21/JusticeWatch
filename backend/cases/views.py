@@ -23,8 +23,8 @@ class CaseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        if user.role == "judge":
-            if user.district_scope:
+        if user.role in ["judge", "admin"]:
+            if user.role == "judge" and user.district_scope:
                 return Case.objects.filter(district=user.district_scope)
             return Case.objects.all()
 
@@ -149,7 +149,9 @@ class MyCaseHistoryView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == "judge":
+        if user.role == "admin":
+            return Case.objects.all().order_by("case_status", "-filed_date")
+        elif user.role == "judge":
             return Case.objects.filter(judge=user).order_by(
                 "case_status", "-filed_date"
             )

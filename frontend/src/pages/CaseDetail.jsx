@@ -46,7 +46,7 @@ const CaseDetail = () => {
 
   useEffect(() => {
     const fetchAssignmentsLists = async () => {
-      if (user?.role === 'judge') {
+      if (user?.role === 'judge' || user?.role === 'admin') {
         try {
           const [lawyersRes, judgesRes] = await Promise.all([
             api.get('/auth/lawyers/'),
@@ -249,7 +249,7 @@ const CaseDetail = () => {
   const isAssignedLawyer = user?.role === 'lawyer' &&
   caseItem.assigned_lawyers &&
   caseItem.assigned_lawyers.some((l) => l.lawyer === user.id);
-  const isJudge = user?.role === 'judge';
+  const isJudge = user?.role === 'judge' || user?.role === 'admin';
   const canEdit = isJudge || isAssignedLawyer;
 
   return (
@@ -398,7 +398,21 @@ const CaseDetail = () => {
               <div className="jw-card-header">
                 <h2 className="jw-card-title">Judicial Hearing Timeline Log</h2>
               </div>
-              <HearingTimeline hearings={hearings} />
+              <HearingTimeline 
+                hearings={hearings} 
+                user={user} 
+                onUpdateHearing={async (hearingId, updatedData) => {
+                  try {
+                    await api.patch(`/timeline/${hearingId}/`, updatedData);
+                    const hearingRes = await api.get(`/timeline/?case=${id}`);
+                    setHearings(hearingRes.data.results || hearingRes.data);
+                    alert("Hearing updated successfully.");
+                  } catch (e) {
+                    console.error("Failed to update hearing", e);
+                    alert("Failed to update hearing.");
+                  }
+                }}
+              />
             </div>
             
           </div>
@@ -525,7 +539,7 @@ const CaseDetail = () => {
                 <h2 className="jw-card-title">Assigned Litigators</h2>
               </div>
               {(caseItem.assigned_lawyers || []).length === 0 ?
-              <div className="text-muted" style={{ fontSize: '0.8rem', fontStyle: 'italic', marginBottom: '0.5rem' }}>No litigators assigned.</div> :
+              <div style={{ marginBottom: '0.5rem' }}></div> :
 
               <div className="flex-col space-y-1" style={{ marginBottom: '0.5rem' }}>
                 {(caseItem.assigned_lawyers || []).map((l) => {

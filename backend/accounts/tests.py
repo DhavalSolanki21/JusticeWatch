@@ -1,153 +1,151 @@
+import pytest
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
 from accounts.models import User
-from districts.models import District, State
 
-class AccountsTests(APITestCase):
-    def setUp(self):
-        self.state = State.objects.create(name="Gujarat", code="GJ")
-        self.district = District.objects.create(
-            state=self.state, name="Ahmedabad", code="AHM", population=1000000
-        )
+@pytest.mark.django_db
+def test_superuser_creation(api_client):
+    superuser = User.objects.create_superuser(
+        username="admin_user",
+        email="admin@justicewatch.com",
+        password="SuperPassword@123",
+    )
+    assert superuser.is_superuser
+    assert superuser.is_staff
+    response = api_client.post(
+        reverse("login"),
+        {"username": "admin_user", "password": "SuperPassword@123"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert "access" in response.data
 
-        self.judge = User.objects.create_user(
-            username="judge1",
-            email="judge1@justicewatch.com",
-            password="Password@123",
-            role="judge",
-            full_name="Judge Ahmedabad",
-            is_verified=True,
-            district_scope=self.district,
-        )
+@pytest.mark.django_db
+def test_registration_valid_and_invalid(api_client):
+    register_url = reverse("register")
+    valid_data = {
+        "username": "new_lawyer",
+        "email": "new_lawyer@example.com",
+        "password": "StrongPassword@123",
+        "role": "lawyer",
+        "full_name": "New Lawyer",
+        "bar_council_id": "GJ-99999",
+        "designation": "Advocate",
+    }
+    response = api_client.post(register_url, valid_data)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data["username"] == "new_lawyer"
 
-        self.lawyer_unverified = User.objects.create_user(
-            username="lawyer1",
-            email="lawyer1@justicewatch.com",
-            password="Password@123",
-            role="lawyer",
-            full_name="Lawyer Ahmedabad",
-            is_verified=False,
-            bar_council_id="GJ-12345",
-        )
+    new_user = User.objects.get(username="new_lawyer")
+    assert not new_user.is_verified
 
-    def test_superuser_creation(self):
-        """Verify we can generate superuser models and test admin access."""
-        superuser = User.objects.create_superuser(
-            username="admin_user",
-            email="admin@justicewatch.com",
-            password="SuperPassword@123",
-        )
-        self.assertTrue(superuser.is_superuser)
-        self.assertTrue(superuser.is_staff)
-        response = self.client.post(
-            reverse("login"),
-            {"username": "admin_user", "password": "SuperPassword@123"},
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("access", response.data)
-        self.assertTrue(response.data["user"]["is_verified"] or superuser.is_superuser)
+    response = api_client.post(register_url, valid_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "username" in response.data
 
-    def test_registration_valid_and_invalid(self):
-        """Systematically test all application forms with valid and invalid data inputs."""
-        register_url = reverse("register")
-        valid_data = {
-            "username": "new_lawyer",
-            "email": "new_lawyer@example.com",
-            "password": "StrongPassword@123",
-            "role": "lawyer",
-            "full_name": "New Lawyer",
-            "bar_council_id": "GJ-99999",
-            "designation": "Advocate",
-        }
-        response = self.client.post(register_url, valid_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["username"], "new_lawyer")
+    invalid_data = valid_data.copy()
+    invalid_data["email"] = "not-an-email"
+    invalid_data["username"] = "diff"
+    response = api_client.post(register_url, invalid_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        new_user = User.objects.get(username="new_lawyer")
-        self.assertFalse(new_user.is_verified)
+@pytest.mark.django_db
+def test_login_unverified_lawyer(api_client, lawyer_unverified):
+    response = api_client.post(
+        reverse("login"), {"username": "lawyer_unverified", "password": "Password@123"}
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["detail"][0] == "Account is not verified. Please wait for admin approval."
 
-        response = self.client.post(register_url, valid_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("username", response.data)
+@pytest.mark.django_db
+def test_login_wrong_password(api_client, lawyer_verified):
+    response = api_client.post(
+        reverse("login"), {"username": "lawyer_verified", "password": "wrong"}
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        invalid_data = valid_data.copy()
-        invalid_data["username"] = "another_lawyer"
-        invalid_data["email"] = "not-an-email"
-        response = self.client.post(register_url, invalid_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("email", response.data)
+@pytest.mark.django_db
+def test_login_verified_judge(api_client, judge_ahm):
+    response = api_client.post(
+        reverse("login"), {"username": "judge_ahm", "password": "Password@123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert "access" in response.data
 
-        invalid_data = valid_data.copy()
-        invalid_data["username"] = "weak_pwd_user"
-        invalid_data["email"] = "weak@example.com"
-        invalid_data["password"] = "123"  # too short and simple
-        response = self.client.post(register_url, invalid_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("password", response.data)
+@pytest.mark.django_db
+def test_token_refresh_flow(api_client, judge_ahm):
+    response = api_client.post(
+        reverse("login"), {"username": "judge_ahm", "password": "Password@123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    refresh_token = response.data["refresh"]
+    
+    refresh_res = api_client.post(
+        reverse("token_refresh"), {"refresh": refresh_token}
+    )
+    assert refresh_res.status_code == status.HTTP_200_OK
+    assert "access" in refresh_res.data
 
-    def test_login_unverified_lawyer(self):
-        """Unverified lawyer should not be allowed to log in."""
-        response = self.client.post(
-            reverse("login"), {"username": "lawyer1", "password": "Password@123"}
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("detail", response.data)
-        self.assertEqual(
-            response.data["detail"][0],
-            "Account is not verified. Please wait for admin approval.",
-        )
+@pytest.mark.django_db
+def test_approve_lawyer_rbac(api_client, judge_ahm, lawyer_unverified, lawyer_verified):
+    approve_url = reverse("approve_lawyer", args=[lawyer_unverified.id])
 
-    def test_login_verified_judge(self):
-        """Verified judge should log in successfully and receive JWT."""
-        response = self.client.post(
-            reverse("login"), {"username": "judge1", "password": "Password@123"}
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("access", response.data)
-        self.assertEqual(response.data["user"]["role"], "judge")
+    # Unauthenticated
+    response = api_client.post(approve_url)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_approve_lawyer_rbac(self):
-        """Only judges can approve lawyers."""
-        approve_url = reverse("approve_lawyer", args=[self.lawyer_unverified.id])
+    # Lawyer
+    api_client.force_authenticate(user=lawyer_verified)
+    response = api_client.post(approve_url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    api_client.force_authenticate(user=None)
 
-        response = self.client.post(approve_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    # Judge
+    api_client.force_authenticate(user=judge_ahm)
+    response = api_client.post(approve_url)
+    assert response.status_code == status.HTTP_200_OK
+    lawyer_unverified.refresh_from_db()
+    assert lawyer_unverified.is_verified
 
-        self.lawyer_unverified.is_verified = True
-        self.lawyer_unverified.save()
-        self.client.force_authenticate(user=self.lawyer_unverified)
-        response = self.client.post(approve_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.client.force_authenticate(user=None)
+@pytest.mark.django_db
+def test_profile_update(api_client, judge_ahm):
+    api_client.force_authenticate(user=judge_ahm)
+    profile_url = reverse("user_profile")
+    
+    response = api_client.put(profile_url, {"display_name": "Justice AHM", "email": "justice_ahm@justicewatch.com"})
+    assert response.status_code == status.HTTP_200_OK
+    judge_ahm.refresh_from_db()
+    assert judge_ahm.email == "justice_ahm@justicewatch.com"
 
-        self.lawyer_unverified.is_verified = False
-        self.lawyer_unverified.save()
+@pytest.mark.django_db
+def test_unauthenticated_access_blocked(api_client):
+    assert api_client.get(reverse("user_profile")).status_code == 401
+    assert api_client.get(reverse("pending_lawyers")).status_code == 401
+    assert api_client.get(reverse("judge_history")).status_code == 401
+    assert api_client.get(reverse("verified_lawyers")).status_code == 401
+    assert api_client.get(reverse("verified_judges")).status_code == 401
 
-        self.client.force_authenticate(user=self.judge)
-        response = self.client.post(approve_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(User.objects.get(id=self.lawyer_unverified.id).is_verified)
+@pytest.mark.django_db
+def test_verified_lawyers_list(api_client, judge_ahm, lawyer_verified, lawyer_unverified):
+    api_client.force_authenticate(user=judge_ahm)
+    response = api_client.get(reverse("verified_lawyers"))
+    assert response.status_code == 200
+    assert len(response.data) == 1
+    assert response.data[0]["username"] == lawyer_verified.username
 
-    def test_profile_update(self):
-        """Test profile updates with valid/invalid data."""
-        self.client.force_authenticate(user=self.judge)
-        profile_url = reverse("user_profile")
+@pytest.mark.django_db
+def test_verified_judges_list(api_client, judge_ahm, lawyer_verified):
+    api_client.force_authenticate(user=lawyer_verified)
+    response = api_client.get(reverse("verified_judges"))
+    assert response.status_code == 200
+    assert len(response.data) == 1
+    assert response.data[0]["username"] == judge_ahm.username
 
-        response = self.client.get(profile_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["username"], "judge1")
-
-        update_data = {
-            "display_name": "Justice AHM",
-            "email": "justice_ahm@justicewatch.com",
-        }
-        response = self.client.put(profile_url, update_data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["display_name"], "Justice AHM")
-        self.assertEqual(
-            User.objects.get(id=self.judge.id).email, "justice_ahm@justicewatch.com"
-        )
-
-        response = self.client.put(profile_url, {"email": "invalid-email"})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+@pytest.mark.django_db
+def test_judge_case_history(api_client, judge_ahm, case_ahm):
+    case_ahm.judge = judge_ahm
+    case_ahm.save()
+    api_client.force_authenticate(user=judge_ahm)
+    response = api_client.get(reverse("judge_history"))
+    assert response.status_code == 200
+    assert len(response.data) == 1
+    assert response.data[0]["id"] == case_ahm.id

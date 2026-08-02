@@ -10,7 +10,7 @@ class IsJudgeOrAdmin(permissions.BasePermission):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role in ["JUDGE", "ADMIN"]
+            and request.user.role in ["judge", "admin"]
         )
 
 
@@ -23,5 +23,5 @@ class IsLawyer(permissions.BasePermission):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role == "LAWYER"
+            and request.user.role == "lawyer"
         )

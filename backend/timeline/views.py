@@ -12,8 +12,8 @@ class HearingViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated or not user.is_verified:
             return Hearing.objects.none()
 
-        if user.role == "judge":
-            if user.district_scope:
+        if user.role in ["judge", "admin"]:
+            if user.role == "judge" and user.district_scope:
                 qs = Hearing.objects.filter(case__district=user.district_scope)
             else:
                 qs = Hearing.objects.all()
@@ -54,8 +54,8 @@ class HearingViewSet(viewsets.ModelViewSet):
                     },
                     status=status.HTTP_403_FORBIDDEN,
                 )
-        elif user.role == "judge":
-            if user.district_scope:
+        elif user.role in ["judge", "admin"]:
+            if user.role == "judge" and user.district_scope:
                 from cases.models import Case
 
                 try:

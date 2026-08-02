@@ -5,7 +5,7 @@ class IsJudge(permissions.BasePermission):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role == "judge"
+            and request.user.role in ["judge", "admin"]
             and request.user.is_verified
         )
 
@@ -25,7 +25,7 @@ class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
         ):
             return False
 
-        if request.user.role == "judge":
+        if request.user.role in ["judge", "admin"]:
             return True
 
         if request.user.role == "lawyer":
@@ -38,7 +38,7 @@ class IsJudgeOrReadOnlyForLawyer(permissions.BasePermission):
         return False
 
     def has_object_permission(self, request, view, obj):
-        if request.user.role == "judge":
+        if request.user.role in ["judge", "admin"]:
             return True
 
         if request.user.role == "lawyer":

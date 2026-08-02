@@ -9,14 +9,20 @@ const AllCases = () => {
   const [loading, setLoading] = useState(true);
   const [districts, setDistricts] = useState([]);
   const [selectedDistrict, setSelectedDistrict] = useState('');
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
     fetchDistricts();
-    fetchCases();
   }, []);
+
+  useEffect(() => {
+    fetchCases(selectedDistrict, page);
+  }, [selectedDistrict, page]);
 
   const fetchDistricts = async () => {
     try {
@@ -27,15 +33,23 @@ const AllCases = () => {
     }
   };
 
-  const fetchCases = async (districtId = '') => {
+  const fetchCases = async (districtId = '', currentPage = 1) => {
     setLoading(true);
     try {
       let url = '/cases/all/';
+      const params = { page: currentPage };
       if (districtId) {
-        url += `?district=${districtId}`;
+        params.district = districtId;
       }
-      const response = await api.get(url);
-      setCases(response.data.results || response.data);
+      const response = await api.get(url, { params });
+      
+      if (response.data.results) {
+        setCases(response.data.results);
+        setTotalPages(Math.ceil(response.data.count / 50));
+      } else {
+        setCases(response.data);
+        setTotalPages(1);
+      }
     } catch (err) {
       console.error("Failed to load cases", err);
     } finally {
@@ -45,7 +59,7 @@ const AllCases = () => {
 
   const handleFilterChange = (e) => {
     setSelectedDistrict(e.target.value);
-    fetchCases(e.target.value);
+    setPage(1); // reset to first page on filter change
   };
 
   return (
@@ -74,52 +88,74 @@ const AllCases = () => {
               No cases found in the registry.
             </div> :
 
-          <div className="table-responsive">
-              <table className="jw-table">
-                <thead>
-                  <tr>
-                    <th>Case Number</th>
-                    <th>District</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th>Filed Date</th>
-                    <th>Predicted Diff.</th>
-                    {user?.role === 'judge' && <th>Action</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cases.map((c) =>
-                <tr key={c.id}>
-                      <td><strong>{c.case_number}</strong></td>
-                      <td>{c.district_name}</td>
-                      <td>{c.case_category}</td>
-                      <td>
-                        <span className={`badge badge-${c.case_status === 'Pending' ? 'critical' : c.case_status === 'Stayed' ? 'medium' : 'low'}`}>
-                          {c.case_status}
-                        </span>
-                      </td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{c.filed_date}</td>
-                      <td>
-                        {c.difficulty_tier ?
-                    <span className={`badge badge-${c.difficulty_tier === 'high' || c.difficulty_tier === 'critical' ? 'critical' : c.difficulty_tier === 'medium' ? 'medium' : 'low'}`}>
-                            {c.difficulty_tier.toUpperCase()}
-                          </span> :
-
-                    <span style={{ color: 'var(--text-muted)' }}>Unassessed</span>
-                    }
-                      </td>
-                      {user?.role === 'judge' &&
-                  <td>
-                          <button className="btn btn-outline" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }} onClick={() => navigate(`/cases/${c.id}`)}>
-                            Full View
-                          </button>
-                        </td>
-                  }
+          <>
+              <div className="table-responsive">
+                <table className="jw-table">
+                  <thead>
+                    <tr>
+                      <th>Case Number</th>
+                      <th>District</th>
+                      <th>Category</th>
+                      <th>Status</th>
+                      <th>Filed Date</th>
+                      <th>Predicted Diff.</th>
+                      {user?.role === 'judge' && <th>Action</th>}
                     </tr>
-                )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {cases.map((c) =>
+                  <tr key={c.id}>
+                        <td><strong>{c.case_number}</strong></td>
+                        <td>{c.district_name}</td>
+                        <td>{c.case_category}</td>
+                        <td>
+                          <span className={`badge badge-${c.case_status === 'Pending' ? 'critical' : c.case_status === 'Stayed' ? 'medium' : 'low'}`}>
+                            {c.case_status}
+                          </span>
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{c.filed_date}</td>
+                        <td>
+                          {c.difficulty_tier ?
+                      <span className={`badge badge-${c.difficulty_tier === 'high' || c.difficulty_tier === 'critical' ? 'critical' : c.difficulty_tier === 'medium' ? 'medium' : 'low'}`}>
+                              {c.difficulty_tier.toUpperCase()}
+                            </span> :
+
+                      <span style={{ color: 'var(--text-muted)' }}>Unassessed</span>
+                      }
+                        </td>
+                        {user?.role === 'judge' &&
+                    <td>
+                            <button className="btn btn-outline" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }} onClick={() => navigate(`/cases/${c.id}`)}>
+                              Full View
+                            </button>
+                          </td>
+                    }
+                      </tr>
+                  )}
+                  </tbody>
+                </table>
+              </div>
+
+              {totalPages > 1 &&
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-main)' }}>
+                <button
+                  className="btn btn-outline btn-sm"
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  Previous Page
+                </button>
+                <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  className="btn btn-outline btn-sm"
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  Next Page
+                </button>
+              </div>
+              }
+            </>
           }
         </div>
       </div>

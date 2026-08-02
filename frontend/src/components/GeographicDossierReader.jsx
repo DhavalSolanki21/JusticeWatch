@@ -44,14 +44,17 @@ export function GeographicDossierReader({ hoveredDetails, hoveredShape }) {
               <div className="geo-dossier-severity-header">
                 <span>Backlog Severity Indicator</span>
                 <span className={`geo-text-${hoveredDetails.severity_tier?.toLowerCase() || 'default'}`}>
-                  {hoveredDetails.severity_tier}
+                  {hoveredDetails.severity_tier?.toUpperCase()}
                 </span>
               </div>
               <div className="geo-dossier-severity-bar-bg">
                 <div
                 className={`geo-dossier-severity-bar-fill geo-bg-${hoveredDetails.severity_tier?.toLowerCase() || 'default'}`}
                 style={{
-                  width: `${Math.min(100, (hoveredDetails.pending_count / 25) * 100)}%`
+                  width: hoveredDetails.severity_tier?.toLowerCase() === 'critical' ? '100%' :
+                         hoveredDetails.severity_tier?.toLowerCase() === 'high' ? '70%' :
+                         hoveredDetails.severity_tier?.toLowerCase() === 'medium' ? '40%' :
+                         hoveredDetails.severity_tier?.toLowerCase() === 'low' ? '10%' : '0%'
                 }} />
               
               </div>

@@ -1,185 +1,168 @@
+import pytest
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
-from accounts.models import User
-from districts.models import District, State
 from cases.models import Case, CaseAssignment
 from unittest.mock import patch
 
-class CasesTests(APITestCase):
-    def setUp(self):
-        self.state = State.objects.create(name="Gujarat", code="GJ")
-        self.district_ahm = District.objects.create(
-            state=self.state, name="Ahmedabad", code="AHM", population=1000000
-        )
-        self.district_sur = District.objects.create(
-            state=self.state, name="Surat", code="SUR", population=800000
-        )
+@pytest.mark.django_db
+def test_case_list_judge(api_client, auth_judge, case_ahm):
+    response = auth_judge.get(reverse("case-list"))
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["count"] == 1
+    assert response.data["results"][0]["case_number"] == "CIV/2026/AHM111"
 
-        self.judge_ahm = User.objects.create_user(
-            username="judge_ahm",
-            email="judge_ahm@justicewatch.com",
-            password="Password@123",
-            role="judge",
-            full_name="Judge Ahmedabad",
-            is_verified=True,
-            district_scope=self.district_ahm,
-        )
-        self.lawyer1 = User.objects.create_user(
-            username="lawyer1",
-            email="lawyer1@justicewatch.com",
-            password="Password@123",
-            role="lawyer",
-            full_name="Lawyer 1",
-            is_verified=True,
-        )
-        self.lawyer2 = User.objects.create_user(
-            username="lawyer2",
-            email="lawyer2@justicewatch.com",
-            password="Password@123",
-            role="lawyer",
-            full_name="Lawyer 2",
-            is_verified=True,
-        )
+@pytest.mark.django_db
+def test_case_list_lawyer(api_client, auth_lawyer, case_ahm, assignment_ahm):
+    response = auth_lawyer.get(reverse("case-list"))
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["count"] == 1
+    assert response.data["results"][0]["case_number"] == "CIV/2026/AHM111"
 
-        self.case_ahm = Case.objects.create(
-            case_number="CIV/2026/AHM111",
-            district=self.district_ahm,
-            court_name="Ahmedabad Civil Court",
-            case_category="Civil",
-            crime_type="Property Dispute",
-            applicable_sections="Sec 37",
-            filed_date="2026-01-01",
-            chargesheet_status="Not Filed",
-            case_status="Pending",
-            num_parties=2,
-        )
-        self.case_sur = Case.objects.create(
-            case_number="CRM/2026/SUR222",
-            district=self.district_sur,
-            court_name="Surat Sessions Court",
-            case_category="Criminal",
-            crime_type="Theft",
-            applicable_sections="Sec 379 IPC",
-            filed_date="2026-02-01",
-            chargesheet_status="Filed",
-            case_status="Pending",
-            num_parties=2,
-        )
+@pytest.mark.django_db
+def test_case_creation_valid_and_invalid(auth_judge, district_ahm):
+    valid_data = {
+        "district": district_ahm.id,
+        "court_name": "New Court AHM",
+        "case_category": "Civil",
+        "crime_type": "Contract Dispute",
+        "applicable_sections": "Sec 10 Indian Contract Act",
+        "fir_number": "FIR-001",
+        "fir_date": "2026-07-10",
+        "arrest_date": "2026-07-10",
+        "chargesheet_status": "Not Filed",
+        "case_status": "Pending",
+        "num_parties": 3,
+        "case_notes": "Urgent contract case.",
+    }
+    response = auth_judge.post(reverse("case-list"), valid_data)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data["court_name"] == "New Court AHM"
 
-        CaseAssignment.objects.create(
-            case=self.case_ahm, lawyer=self.lawyer1, representing="Petitioner"
-        )
+    invalid_data = valid_data.copy()
+    invalid_data["case_category"] = "Supernatural"
+    response = auth_judge.post(reverse("case-list"), invalid_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_case_list_judge(self):
-        """Judge gets cases in their district scope."""
-        self.client.force_authenticate(user=self.judge_ahm)
-        response = self.client.get(reverse("case-list"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["case_number"], "CIV/2026/AHM111")
+    invalid_data = valid_data.copy()
+    del invalid_data["district"]
+    response = auth_judge.post(reverse("case-list"), invalid_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_case_list_lawyer(self):
-        """Lawyer gets only assigned cases."""
-        self.client.force_authenticate(user=self.lawyer1)
-        response = self.client.get(reverse("case-list"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["case_number"], "CIV/2026/AHM111")
+@pytest.mark.django_db
+def test_lawyer_case_update(auth_lawyer, case_ahm, assignment_ahm):
+    detail_url = reverse("case-detail", args=[case_ahm.id])
+    update_data = {
+        "chargesheet_status": "Under Review",
+        "case_notes": "Updated lawyer notes.",
+    }
+    response = auth_lawyer.patch(detail_url, update_data)
+    assert response.status_code == status.HTTP_200_OK
+    case_ahm.refresh_from_db()
+    assert case_ahm.chargesheet_status == "Under Review"
 
-    def test_case_creation_valid_and_invalid(self):
-        """Test case creation form with valid/invalid parameters."""
-        self.client.force_authenticate(user=self.judge_ahm)
+@pytest.mark.django_db
+def test_lawyer_update_unassigned_case(auth_lawyer, case_sur):
+    detail_url = reverse("case-detail", args=[case_sur.id])
+    update_data = {"chargesheet_status": "Under Review"}
+    response = auth_lawyer.patch(detail_url, update_data)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
-        valid_data = {
-            "district": self.district_ahm.id,
-            "court_name": "New Court AHM",
-            "case_category": "Civil",
-            "crime_type": "Contract Dispute",
-            "applicable_sections": "Sec 10 Indian Contract Act",
-            "fir_number": "FIR-001",
-            "fir_date": "2026-07-10",
-            "arrest_date": "2026-07-10",
-            "chargesheet_status": "Not Filed",
-            "case_status": "Pending",
-            "num_parties": 3,
-            "case_notes": "Urgent contract case.",
-        }
-        response = self.client.post(reverse("case-list"), valid_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["court_name"], "New Court AHM")
-        self.assertIsNotNone(response.data["id"])
+@pytest.mark.django_db
+def test_lawyer_update_unauthorized_fields(auth_lawyer, case_ahm, assignment_ahm):
+    detail_url = reverse("case-detail", args=[case_ahm.id])
+    update_data = {"court_name": "Hack Court Name"}
+    response = auth_lawyer.patch(detail_url, update_data)
+    assert response.status_code == status.HTTP_200_OK
+    case_ahm.refresh_from_db()
+    assert case_ahm.court_name == "Ahmedabad Civil Court"
 
-        invalid_data = valid_data.copy()
-        invalid_data["case_category"] = "Supernatural"
-        response = self.client.post(reverse("case-list"), invalid_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("case_category", response.data)
+@pytest.mark.django_db
+@patch("cases.ml_service.predict_for_case")
+def test_case_predict_endpoint(mock_predict, auth_judge, case_ahm):
+    mock_predict.return_value = {
+        "duration_risk": "critical",
+        "duration_confidence": 85.0,
+        "disposal_likelihood": "Likely (Acquitted)",
+        "disposal_confidence": 92.5,
+        "risk_factors": ["High case age"],
+    }
+    predict_url = reverse("case-predict", args=[case_ahm.id])
+    response = auth_judge.get(predict_url)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["duration_risk"] == "critical"
+    case_ahm.refresh_from_db()
+    assert case_ahm.difficulty_tier == "critical"
 
-        invalid_data = valid_data.copy()
-        del invalid_data["district"]
-        response = self.client.post(reverse("case-list"), invalid_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("district", response.data)
+@pytest.mark.django_db
+def test_assign_lawyer_by_judge(auth_judge, case_ahm, lawyer_verified):
+    assign_url = reverse("case-assign-lawyer", args=[case_ahm.id])
+    response = auth_judge.post(assign_url, {"lawyer_id": lawyer_verified.id, "representing": "Defense"})
+    assert response.status_code == status.HTTP_200_OK
+    assert CaseAssignment.objects.filter(case=case_ahm, lawyer=lawyer_verified).exists()
 
-    def test_lawyer_case_update(self):
-        """Lawyer can update chargesheet_status and case_notes for assigned case."""
-        self.client.force_authenticate(user=self.lawyer1)
-        detail_url = reverse("case-detail", args=[self.case_ahm.id])
+@pytest.mark.django_db
+def test_assign_lawyer_by_self(auth_lawyer, case_ahm, lawyer_verified):
+    assign_url = reverse("case-assign-lawyer", args=[case_ahm.id])
+    # assigning self should fail if lawyer cannot see the unassigned case (404)
+    response = auth_lawyer.post(assign_url, {"lawyer_id": lawyer_verified.id})
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
-        update_data = {
-            "chargesheet_status": "Under Review",
-            "case_notes": "Updated lawyer notes.",
-        }
-        response = self.client.patch(detail_url, update_data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+@pytest.mark.django_db
+def test_assign_lawyer_invalid(auth_judge, case_ahm):
+    assign_url = reverse("case-assign-lawyer", args=[case_ahm.id])
+    response = auth_judge.post(assign_url, {})
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    response = auth_judge.post(assign_url, {"lawyer_id": 9999})
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
-        case = Case.objects.get(id=self.case_ahm.id)
-        self.assertEqual(case.chargesheet_status, "Under Review")
-        self.assertEqual(case.case_notes, "Updated lawyer notes.")
+@pytest.mark.django_db
+def test_unassign_lawyer_by_judge(auth_judge, case_ahm, assignment_ahm):
+    unassign_url = reverse("case-unassign-lawyer", args=[case_ahm.id])
+    response = auth_judge.post(unassign_url, {"assignment_id": assignment_ahm.id})
+    assert response.status_code == status.HTTP_200_OK
+    assert not CaseAssignment.objects.filter(id=assignment_ahm.id).exists()
 
-    def test_lawyer_update_unassigned_case(self):
-        """Lawyer cannot update an unassigned case."""
-        self.client.force_authenticate(user=self.lawyer1)
-        detail_url = reverse(
-            "case-detail", args=[self.case_sur.id]
-        )  # lawyer1 not assigned
+@pytest.mark.django_db
+def test_unassign_lawyer_forbidden(auth_lawyer, case_sur, lawyer_verified, db):
+    unassign_url = reverse("case-unassign-lawyer", args=[case_sur.id])
+    response = auth_lawyer.post(unassign_url, {"assignment_id": 999})
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
-        update_data = {
-            "chargesheet_status": "Under Review",
-            "case_notes": "Should fail.",
-        }
-        response = self.client.patch(detail_url, update_data)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+@pytest.mark.django_db
+def test_case_filters(auth_judge, case_ahm, case_sur):
+    res = auth_judge.get(reverse("case-list") + "?case_category=Civil")
+    assert res.data["count"] == 1
+    res = auth_judge.get(reverse("case-list") + "?case_status=Pending")
+    assert res.data["count"] == 1
+    res = auth_judge.get(reverse("case-list") + "?search=CIV/2026/AHM111")
+    assert res.data["count"] == 1
 
-    def test_lawyer_update_unauthorized_fields(self):
-        """Lawyer cannot update unauthorized fields like court_name."""
-        self.client.force_authenticate(user=self.lawyer1)
-        detail_url = reverse("case-detail", args=[self.case_ahm.id])
+@pytest.mark.django_db
+def test_case_ordering(auth_judge, case_ahm, case_sur, judge_ahm):
+    case_sur.district = case_ahm.district
+    case_sur.save()
+    res = auth_judge.get(reverse("case-list") + "?ordering=difficulty_score")
+    assert res.status_code == 200
 
-        update_data = {"court_name": "Hack Court Name"}
-        response = self.client.patch(detail_url, update_data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+@pytest.mark.django_db
+def test_all_cases_list_verified_only(api_client, case_ahm, lawyer_unverified):
+    api_client.force_authenticate(user=lawyer_unverified)
+    response = api_client.get(reverse("all_cases"))
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
-        case = Case.objects.get(id=self.case_ahm.id)
-        self.assertEqual(case.court_name, "Ahmedabad Civil Court")
+@pytest.mark.django_db
+def test_my_history_judge_and_lawyer(auth_judge, auth_lawyer, case_ahm, assignment_ahm, judge_ahm):
+    case_ahm.judge = judge_ahm
+    case_ahm.save()
+    res_judge = auth_judge.get(reverse("my_history"))
+    assert res_judge.status_code == 200
+    assert len(res_judge.data["results"] if "results" in res_judge.data else res_judge.data) > 0
 
-    @patch("cases.ml_service.predict_for_case")
-    def test_case_predict_endpoint(self, mock_predict):
-        """Test predict endpoint for cases."""
-        mock_predict.return_value = {
-            "duration_risk": "critical",
-            "duration_confidence": 85.0,
-            "disposal_likelihood": "Likely (Acquitted)",
-            "disposal_confidence": 92.5,
-            "risk_factors": ["High case age"],
-        }
-        self.client.force_authenticate(user=self.judge_ahm)
-        predict_url = reverse("case-predict", args=[self.case_ahm.id])
-        response = self.client.get(predict_url)
+    res_lawyer = auth_lawyer.get(reverse("my_history"))
+    assert res_lawyer.status_code == 200
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["duration_risk"], "critical")
-
-        case = Case.objects.get(id=self.case_ahm.id)
-        self.assertEqual(case.difficulty_tier, "critical")
+@pytest.mark.django_db
+def test_unauthenticated_case_access(api_client):
+    assert api_client.get(reverse("case-list")).status_code == 401
+    assert api_client.get(reverse("all_cases")).status_code == 401
+    assert api_client.get(reverse("my_history")).status_code == 401

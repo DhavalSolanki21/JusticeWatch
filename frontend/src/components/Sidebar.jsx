@@ -83,7 +83,7 @@ const Sidebar = () => {
 
   if (!user) return null;
 
-  const isJudge = user.role === 'judge';
+  const isJudgeOrAdmin = user.role === 'judge' || user.role === 'admin';
 
   return (
     <aside className="sidebar">
@@ -93,7 +93,7 @@ const Sidebar = () => {
       </div>
 
       <nav className="sidebar-nav">
-        {isJudge ?
+        {isJudgeOrAdmin ?
         <>
             <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <DashboardIcon />
@@ -164,7 +164,7 @@ const Sidebar = () => {
           <div>
             <div className="sidebar-user-name">{user.full_name}</div>
             <div className="sidebar-user-role">
-              {isJudge ? 'District & Sessions Judge' : 'Bar Registered Advocate'}
+              {user.role === 'admin' ? 'System Administrator' : user.role === 'judge' ? 'District & Sessions Judge' : 'Bar Registered Advocate'}
             </div>
           </div>
         </div>

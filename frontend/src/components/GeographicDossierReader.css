@@ -147,13 +147,13 @@
 /* Severity text colors */
 .geo-text-critical { color: #FB7185; font-weight: 700; text-transform: uppercase; }
 .geo-text-high { color: #FB923C; font-weight: 700; text-transform: uppercase; }
-.geo-text-moderate { color: #FBBF24; font-weight: 700; text-transform: uppercase; }
+.geo-text-medium { color: #FBBF24; font-weight: 700; text-transform: uppercase; }
 .geo-text-low { color: #34D399; font-weight: 700; text-transform: uppercase; }
 
 /* Severity bar colors */
 .geo-bg-critical { background-color: #F43F5E; }
 .geo-bg-high { background-color: #F97316; }
-.geo-bg-moderate { background-color: #F59E0B; }
+.geo-bg-medium { background-color: #F59E0B; }
 .geo-bg-low { background-color: #10B981; }
 
 .geo-dossier-incident {

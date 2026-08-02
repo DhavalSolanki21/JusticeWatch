@@ -1,141 +1,97 @@
+import pytest
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
-from accounts.models import User
-from districts.models import District, State
-from cases.models import Case, CaseAssignment
-from timeline.models import Hearing
 
-class TimelineTests(APITestCase):
-    def setUp(self):
-        self.state = State.objects.create(name="Gujarat", code="GJ")
-        self.district_ahm = District.objects.create(
-            state=self.state, name="Ahmedabad", code="AHM"
-        )
-        self.district_sur = District.objects.create(
-            state=self.state, name="Surat", code="SUR"
-        )
+@pytest.mark.django_db
+def test_hearing_list_lawyer(auth_lawyer, hearing_ahm, lawyer_unverified, api_client, assignment_ahm):
+    response = auth_lawyer.get(reverse("hearing-list"))
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data["results"]) == 1
+    assert response.data["results"][0]["purpose"] == "First Hearing"
 
-        self.judge_ahm = User.objects.create_user(
-            username="judge_ahm",
-            email="judge_ahm@justicewatch.com",
-            password="Password@123",
-            role="judge",
-            full_name="Judge Ahmedabad",
-            is_verified=True,
-            district_scope=self.district_ahm,
-        )
-        self.lawyer_assigned = User.objects.create_user(
-            username="lawyer_asg",
-            email="lawyer_asg@justicewatch.com",
-            password="Password@123",
-            role="lawyer",
-            full_name="Assigned Lawyer",
-            is_verified=True,
-        )
-        self.lawyer_unassigned = User.objects.create_user(
-            username="lawyer_unasg",
-            email="lawyer_unasg@justicewatch.com",
-            password="Password@123",
-            role="lawyer",
-            full_name="Unassigned Lawyer",
-            is_verified=True,
-        )
+    api_client.force_authenticate(user=lawyer_unverified)
+    response = api_client.get(reverse("hearing-list"))
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data["results"]) == 0
 
-        self.case_ahm = Case.objects.create(
-            case_number="CIV/2026/AHM111",
-            district=self.district_ahm,
-            court_name="Ahmedabad Civil Court",
-            case_category="Civil",
-            crime_type="Property Dispute",
-            applicable_sections="Sec 37",
-            filed_date="2026-01-01",
-            chargesheet_status="Not Filed",
-            case_status="Pending",
-        )
-        self.case_sur = Case.objects.create(
-            case_number="CRM/2026/SUR222",
-            district=self.district_sur,
-            court_name="Surat Sessions Court",
-            case_category="Criminal",
-            crime_type="Theft",
-            applicable_sections="Sec 379 IPC",
-            filed_date="2026-02-01",
-            chargesheet_status="Filed",
-            case_status="Pending",
-        )
+@pytest.mark.django_db
+def test_hearing_creation_judge_valid(auth_judge, case_ahm):
+    data = {
+        "case": case_ahm.id,
+        "hearing_date": "2026-04-01",
+        "purpose": "Arguments",
+        "next_hearing_date": "2026-05-01",
+    }
+    response = auth_judge.post(reverse("hearing-list"), data)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data["purpose"] == "Arguments"
 
-        CaseAssignment.objects.create(
-            case=self.case_ahm, lawyer=self.lawyer_assigned, representing="Petitioner"
-        )
+@pytest.mark.django_db
+def test_hearing_creation_judge_invalid_scope(auth_judge, case_sur):
+    data = {
+        "case": case_sur.id,
+        "hearing_date": "2026-04-01",
+        "purpose": "Arguments",
+    }
+    response = auth_judge.post(reverse("hearing-list"), data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data["detail"] == "You do not have permission to log a hearing for this case outside your district scope."
 
-        self.hearing = Hearing.objects.create(
-            case=self.case_ahm,
-            hearing_date="2026-03-01",
-            purpose="First Hearing",
-            logged_by=self.judge_ahm,
-        )
+@pytest.mark.django_db
+def test_hearing_creation_lawyer_assigned(auth_lawyer, case_ahm, assignment_ahm):
+    data = {
+        "case": case_ahm.id,
+        "hearing_date": "2026-04-01",
+        "purpose": "Evidence Submission",
+    }
+    response = auth_lawyer.post(reverse("hearing-list"), data)
+    assert response.status_code == status.HTTP_201_CREATED
 
-    def test_hearing_list_lawyer(self):
-        """Lawyer only sees hearings for their assigned cases."""
-        self.client.force_authenticate(user=self.lawyer_assigned)
-        response = self.client.get(reverse("hearing-list"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["purpose"], "First Hearing")
+@pytest.mark.django_db
+def test_hearing_creation_lawyer_unassigned(api_client, case_ahm, lawyer_unverified):
+    api_client.force_authenticate(user=lawyer_unverified)
+    lawyer_unverified.is_verified = True
+    lawyer_unverified.save()
+    data = {
+        "case": case_ahm.id,
+        "hearing_date": "2026-04-01",
+        "purpose": "Hack",
+    }
+    response = api_client.post(reverse("hearing-list"), data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
-        self.client.force_authenticate(user=self.lawyer_unassigned)
-        response = self.client.get(reverse("hearing-list"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 0)
+@pytest.mark.django_db
+def test_hearing_list_filtered_by_case(auth_judge, case_ahm, hearing_ahm):
+    response = auth_judge.get(reverse("hearing-list") + f"?case={case_ahm.id}")
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data["results"]) == 1
 
-    def test_hearing_creation_judge_valid(self):
-        """Judge can create a hearing in their district scope."""
-        self.client.force_authenticate(user=self.judge_ahm)
-        data = {
-            "case": self.case_ahm.id,
-            "hearing_date": "2026-04-01",
-            "purpose": "Arguments",
-            "next_hearing_date": "2026-05-01",
-        }
-        response = self.client.post(reverse("hearing-list"), data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["purpose"], "Arguments")
+@pytest.mark.django_db
+def test_hearing_creation_missing_case(auth_judge):
+    data = {
+        "hearing_date": "2026-04-01",
+        "purpose": "Arguments",
+    }
+    response = auth_judge.post(reverse("hearing-list"), data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_hearing_creation_judge_invalid_scope(self):
-        """Judge cannot create a hearing outside their district scope."""
-        self.client.force_authenticate(user=self.judge_ahm)
-        data = {
-            "case": self.case_sur.id,  # Surat case is outside Ahmedabad scope
-            "hearing_date": "2026-04-01",
-            "purpose": "Arguments",
-        }
-        response = self.client.post(reverse("hearing-list"), data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("detail", response.data)
-        self.assertEqual(
-            response.data["detail"],
-            "You do not have permission to log a hearing for this case outside your district scope.",
-        )
+@pytest.mark.django_db
+def test_hearing_creation_invalid_case_id(auth_judge):
+    data = {
+        "case": 9999,
+        "hearing_date": "2026-04-01",
+        "purpose": "Arguments",
+    }
+    response = auth_judge.post(reverse("hearing-list"), data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_hearing_creation_lawyer_assigned(self):
-        """Assigned lawyer can log a hearing for their case."""
-        self.client.force_authenticate(user=self.lawyer_assigned)
-        data = {
-            "case": self.case_ahm.id,
-            "hearing_date": "2026-04-01",
-            "purpose": "Evidence Submission",
-        }
-        response = self.client.post(reverse("hearing-list"), data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+@pytest.mark.django_db
+def test_unauthenticated_access(api_client):
+    assert api_client.get(reverse("hearing-list")).status_code == 401
 
-    def test_hearing_creation_lawyer_unassigned(self):
-        """Unassigned lawyer cannot log a hearing."""
-        self.client.force_authenticate(user=self.lawyer_unassigned)
-        data = {
-            "case": self.case_ahm.id,
-            "hearing_date": "2026-04-01",
-            "purpose": "Hack",
-        }
-        response = self.client.post(reverse("hearing-list"), data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+@pytest.mark.django_db
+def test_unverified_user_sees_nothing(api_client, lawyer_unverified):
+    api_client.force_authenticate(user=lawyer_unverified)
+    response = api_client.get(reverse("hearing-list"))
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data["results"]) == 0
