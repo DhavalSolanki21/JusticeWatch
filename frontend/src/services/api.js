@@ -18,7 +18,7 @@ const api = async (url, options = {}) => {
     const refreshToken = localStorage.getItem('refresh_token');
     if (refreshToken) {
       try {
-        const refreshResponse = await fetch(`${baseURL}/auth/refresh/`, {
+        const refreshResponse = await fetch(`${baseURL}/auth/token/refresh/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh: refreshToken })
@@ -73,7 +73,14 @@ const api = async (url, options = {}) => {
       }
       const options = { ...config, method: method.toUpperCase() };
       if (body) {
-        options.body = JSON.stringify(body);
+        if (body instanceof FormData) {
+          options.body = body;
+          if (options.headers) {
+            delete options.headers['Content-Type'];
+          }
+        } else {
+          options.body = JSON.stringify(body);
+        }
       }
       return api(finalUrl, options);
     };

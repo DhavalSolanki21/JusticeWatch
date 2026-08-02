@@ -67,7 +67,10 @@ class JudgeCaseHistoryView(APIView):
         from cases.serializers import CaseListSerializer
         from cases.models import Case
 
-        cases = Case.objects.filter(judge=request.user).order_by("-filed_date")
+        if request.user.role == "admin":
+            cases = Case.objects.all().order_by("-filed_date")
+        else:
+            cases = Case.objects.filter(judge=request.user).order_by("-filed_date")
         serializer = CaseListSerializer(cases, many=True)
         return Response(serializer.data)
 

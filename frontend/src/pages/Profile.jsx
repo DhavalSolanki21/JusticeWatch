@@ -18,7 +18,7 @@ const Profile = () => {
       try {
         const endpoint = user?.role === 'judge' ? '/auth/judge-history/' : '/cases/my-history/';
         const response = await api.get(endpoint);
-        setCases(response.data);
+        setCases(response.data.results || response.data);
       } catch (err) {
         console.error("Failed to load history", err);
       }
@@ -87,7 +87,7 @@ const Profile = () => {
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0' }}>{user.full_name}</h2>
                 <p style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  {user.role === 'judge' ? 'District & Sessions Judge' : 'Bar Registered Advocate'}
+                  {user.role === 'admin' ? 'System Administrator' : user.role === 'judge' ? 'District & Sessions Judge' : 'Bar Registered Advocate'}
                 </p>
                 <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <span className={`badge ${user.is_verified ? 'badge-low' : 'badge-critical'}`}>
