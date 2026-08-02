@@ -52,7 +52,7 @@ const CaseSearch = () => {
       if (status) params.case_status = status;
       if (district) params.district__name = district; // Assumes backend supports this filter
 
-      const endpoint = '/cases/all/';
+      const endpoint = isLawyer ? '/cases/' : '/cases/all/';
       const res = await api.get(endpoint, { params });
 
       if (res.data.results) {
